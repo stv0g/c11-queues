@@ -9,6 +9,11 @@
 - http://moodycamel.com/blog/2013/a-fast-lock-free-queue-for-c++
 - https://github.com/cameron314/readerwriterqueue
 - http://www.1024cores.net/home/lock-free-algorithms/queues/unbounded-spsc-queue
+- https://software.intel.com/en-us/articles/single-producer-single-consumer-queue
+- http://www.boost.org/doc/libs/1_61_0/doc/html/boost/lockfree/spsc_queue.html
+- https://github.com/mstump/queues
+- http://psy-lob-saw.blogspot.ca/p/lock-free-queues.html
+- http://calvados.di.unipi.it/storage/talks/2012_SPSC_Europar.pdf
 
 ## Credits
 
