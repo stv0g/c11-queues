@@ -1,5 +1,9 @@
 # Lock-free Single-Producer Single-consumer (SPSC) queue
 
+This Git repository tries to implement a lightweight SPSC queue in C11.
+
+**State is currently WIP**
+
 ## Design decissions
 
  - Static indexed ring buffer or dynamically linked-lists?
@@ -7,13 +11,26 @@
 ## Some reading material
 
 - http://moodycamel.com/blog/2013/a-fast-lock-free-queue-for-c++
-- https://github.com/cameron314/readerwriterqueue
 - http://www.1024cores.net/home/lock-free-algorithms/queues/unbounded-spsc-queue
-- https://software.intel.com/en-us/articles/single-producer-single-consumer-queue
+- http://www.1024cores.net/home/lock-free-algorithms/queues/non-intrusive-mpsc-node-based-queue
 - http://www.boost.org/doc/libs/1_61_0/doc/html/boost/lockfree/spsc_queue.html
-- https://github.com/mstump/queues
 - http://psy-lob-saw.blogspot.ca/p/lock-free-queues.html
 - http://calvados.di.unipi.it/storage/talks/2012_SPSC_Europar.pdf
+
+## Existing implementations
+
+- [BSD's queue(3)](https://www.freebsd.org/cgi/man.cgi?query=queue&sektion=3)
+- [ck](http://www.concurrencykit.org)
+- [glib](https://developer.gnome.org/glib/)
+- [sglib](http://sglib.sourceforge.net)
+- [gnulib](https://www.gnu.org/software/gnulib/)
+- [libgdsl](http://home.gna.org/gdsl/)
+- [liblfds](http://liblfds.org)
+- [libiberty](https://gcc.gnu.org/onlinedocs/libiberty/)
+- [DPDK](http://dpdk.org)
+- https://github.com/cameron314/readerwriterqueue (see moodycamel Blog)
+- https://software.intel.com/en-us/articles/single-producer-single-consumer-queue (see 1024cores blog from Dmitry Vyukov)
+- https://github.com/mstump/queues
 
 ## Credits
 
