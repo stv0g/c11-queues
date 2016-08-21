@@ -35,17 +35,25 @@
 #include <stdint.h>
 #include <stdatomic.h>
 
+/** Cache line size on modern x86 processors (in bytes) */
+#define CACHE_LINE_SIZE	64
+
 struct queue {
-	size_t size;		/**< Number of pointers in queue::array */
+	size_t capacity;	/**< Number of pointers in queue::array */
 
-	void **pointers;	/**< Circular buffer. */
-
-	_Atomic int head;	/**< */
+	/* Consumer part */
 	_Atomic int tail;	/**< Tail pointer of queue*/
+	
+	char _pad[CACHE_LINE_SIZE];
+	
+	/* Producer part */
+	_Atomic int head;	/**< */
+	
+	void *pointers[];	/**< Circular buffer. */
 };
 
 /** Initiliaze a new queue and allocate memory. */
-int queue_init(struct queue *q, size_t size);
+int queue_init(struct queue *q, size_t len);
 
 /** Release memory of queue. */
 void queue_destroy(struct queue *q);
@@ -70,7 +78,7 @@ int queue_push_many(struct queue *q, void *ptrs[], size_t cnt);
  * @param[out] ptrs An array with space at least \cnt elements which will receive pointers to the released elements.
  * @param cnt The maximum number of elements which should be dequeued. It defines the size of \p ptrs.
  * @param[in,out] head A pointer to a queue head. The value will be updated to reflect the new head.
- * @return The number of elements which have been dequeued <b>and whose reference counts have reached zero</b>.
+ * @return The number of elements which have been dequeued.
  */
 int queue_pull_many(struct queue *q, void *ptrs[], size_t cnt);
 

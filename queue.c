@@ -30,13 +30,9 @@
 
 #include "queue.h"
 
-int queue_init(struct queue *q, size_t size)
+int queue_init(struct queue *q, size_t len)
 {
-	q->size = size;
-
-	q->pointers   = malloc(size * sizeof(void *));
-	if (q->pointers == NULL)
-		return -1;
+	q->capacity = len - sizeof(queue);
 
 	q->tail       = atomic_init(0);
 	q->head       = atomic_init(0);
@@ -46,12 +42,12 @@ int queue_init(struct queue *q, size_t size)
 
 void queue_destroy(struct queue *q)
 {
-	free(q->pointers);
+	/* Nothing to do here */
 }
 
 int queue_get(struct queue *q, void **ptr)
 {
-
+	*ptr = q->pointers[q->head % q->capacity];
 }
 
 int queue_push(struct queue *q, void *ptr)
