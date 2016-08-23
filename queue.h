@@ -33,24 +33,33 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdatomic.h>
 
 /** Cache line size on modern x86 processors (in bytes) */
 #define CACHE_LINE_SIZE	64
 
 struct queue {
-	size_t capacity;	/**< Number of pointers in queue::array */
+	size_t capacity;	/**< Total number of pointers in queue::array */
 
 	/* Consumer part */
-	_Atomic int tail;	/**< Tail pointer of queue*/
+	atomic_int tail;	/**< Tail pointer of queue*/
 	
 	char _pad[CACHE_LINE_SIZE];
 	
 	/* Producer part */
-	_Atomic int head;	/**< */
+	atomic_int head;	/**< */
 	
-	void *pointers[];	/**< Circular buffer. */
+	char _pad2[CACHE_LINE_SIZE];	//--? needed or not
+	atomic_int free_ptrs;	/**< number of free pointers remaining in the queue*/
+	
+	void *pointers[];	/**< Circular buffer. */	//--? confirm how it is different from void * pointers;, allocate whole mem to queue
 };
+
+struct queue_element {
+	_Atomic void * value;
+};
+
 
 /** Initiliaze a new queue and allocate memory. */
 int queue_init(struct queue *q, size_t len);

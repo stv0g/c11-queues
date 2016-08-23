@@ -13,7 +13,7 @@ int test_single_threaded(struct queue *q)
 	for (i = 0, n1 = 0, n2 = 1; i < N; i++) {
 		int fib = n1 + n2;
 		
-		r = queue_push(q, (void *) fib);
+		r = queue_push(q, (void *) fib);	//--? fib will be unavailable outside of for loop...fib should be an array declared at start
 		if (r != 1)
 			return -1;
 		
@@ -54,6 +54,8 @@ int main(int argc, char *argv[])
 	q = hp;
 
 	queue_init(q, len);
+	
+	test_single_threaded(q);
 
 	return 0;
 }
