@@ -34,10 +34,10 @@ int queue_init(struct queue *q, size_t len)
 {
 	//q->capacity = floor((len - sizeof(queue)) / sizeof(struct queue_element));
 	q->capacity = div(len - sizeof(q), sizeof(struct queue_element)).quot;
-	atomic_init(q->free_ptrs, q->capacity - 1); /** One slot wasted to distinguish empty queue from full queue*/
+	atomic_init(&q->free_ptrs, q->capacity - 1); /** One slot wasted to distinguish empty queue from full queue*/
 	
-	q->tail       = atomic_init(0);
-	q->head       = atomic_init(0);
+	atomic_init(&q->tail, 0);
+	atomic_init(&q->head, 0);
 
 	return 0;
 }
@@ -56,48 +56,48 @@ int queue_get(struct queue *q, void **ptr)
 
 int queue_push(struct queue *q, void *ptr)
 {
-	if(atomic_load(q->free_ptrs) == 0)			//--? is atomic_load enough...other thread can make the value 0 after this check before pushing elem
+	if(atomic_load(&q->free_ptrs) == 0)			//--? is atomic_load enough...other thread can make the value 0 after this check before pushing elem
 		return ENOMEM;							//--? should atomic_compare_exchange_weak be used
 	
 	struct queue_element * elem = (struct queue_element *) *(q->pointers);		//--? verify
-	//elem[atomic_load(q->tail)].value = atomic_load(ptr);
+	//elem[atomic_load(&q->tail)].value = atomic_load(&ptr);
 	
-	if(atomic_load(q->tail) == (q->capacity - 1) && atomic_load(q->head) != 0) {	/** check if queue is full */
-		atomic_store(elem[atomic_load(q->tail)].value, ptr);
-		atomic_store(q->tail, 0);
+	if(atomic_load(&q->tail) == (q->capacity - 1) && atomic_load(&q->head) != 0) {	/** check if queue is full */
+		atomic_store(&elem[atomic_load(&q->tail)].value, ptr);
+		atomic_store(&q->tail, 0);
 	}
-	else if((atomic_load(q->tail) + 1) != atomic_load(q->head)) {	//--? is this check needed, if no free_ptrs then condition already fulfulled
-		atomic_store(elem[atomic_load(q->tail)].value, ptr);
-		atomic_fetch_add(q->tail, 1);
+	else if((atomic_load(&q->tail) + 1) != atomic_load(&q->head)) {	//--? is this check needed, if no free_ptrs then condition already fulfulled
+		atomic_store(&elem[atomic_load(&q->tail)].value, ptr);
+		atomic_fetch_add(&q->tail, 1);
 	}
 	else
 		return ENOMEM;
 	
-	atomic_fetch_sub(q->free_ptrs, 1);
+	atomic_fetch_sub(&q->free_ptrs, 1);
 	
 	return 0;
 }
 
 int queue_pull(struct queue *q, void **ptr)
 {
-	if(atomic_load(q->free_ptrs) == (q->capacity - 1))		/** Queue empty*/
+	if(atomic_load(&q->free_ptrs) == (q->capacity - 1))		/** Queue empty*/
 		return -1;
 	
 	struct queue_element * elem = (struct queue_element *) *(q->pointers);		//--? verify
 	
-	if(atomic_load(q->head) == (q->capacity - 1) && atomic_load(q->tail) != (q->capacity - 1)) {	/** check if queue is empty */
+	if(atomic_load(&q->head) == (q->capacity - 1) && atomic_load(&q->tail) != (q->capacity - 1)) {	/** check if queue is empty */
 		//atomic_store(elem[atomic_load(q->tail)].value, ptr);
-		ptr = elem[atomic_load(q->head)].value;
-		atomic_store(q->head, 0);
+		ptr = (void ** ) &elem[atomic_load(&q->head)].value;	//--? verify
+		atomic_store(&q->head, 0);
 	}
-	else if(atomic_load(q->head) != atomic_load(q->tail)) {
-		ptr = elem[atomic_load(q->head)].value;
-		atomic_fetch_add(q->head, 1);
+	else if(atomic_load(&q->head) != atomic_load(&q->tail)) {
+		ptr = (void ** ) &elem[atomic_load(&q->head)].value;
+		atomic_fetch_add(&q->head, 1);
 	}
 	else
 		return ENOMEM;
 	
-	atomic_fetch_add(q->free_ptrs, 1);
+	atomic_fetch_add(&q->free_ptrs, 1);
 	
 	return 0;
 }

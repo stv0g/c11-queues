@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdatomic.h>
+#include <errno.h>
 
 /** Cache line size on modern x86 processors (in bytes) */
 #define CACHE_LINE_SIZE	64

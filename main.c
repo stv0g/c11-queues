@@ -1,5 +1,6 @@
 #include <sys/mman.h>
-#include <pthreads.h>
+#include <pthread.h>
+#include <stdio.h>
 
 #include "queue.h"
 
@@ -35,6 +36,8 @@ int test_single_threaded(struct queue *q)
 			
 		n1 = n2; n2 = fib;
 	}
+	
+	printf("Test Complete\n");
 	
 	return 0;
 }

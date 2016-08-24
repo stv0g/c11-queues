@@ -1,7 +1,7 @@
 #Makefile source: http://stackoverflow.com/questions/1484817/how-do-i-make-a-simple-makefile-for-gcc-on-linux
 
-TARGET = test_queue
-LIBS = -lm
+TARGET = queue_test
+LIBS = -lm -pthread
 CC = gcc
 CFLAGS = -g -Wall
 
