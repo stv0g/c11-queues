@@ -41,7 +41,7 @@
 #define CACHE_LINE_SIZE	64
 
 struct queue {
-	size_t capacity;	/**< Total number of pointers in queue::array */
+	size_t capacity;	/**< Total number of available pointers in queue::array */
 
 	/* Consumer part */
 	atomic_int tail;	/**< Tail pointer of queue*/
@@ -51,16 +51,8 @@ struct queue {
 	/* Producer part */
 	atomic_int head;	/**< */
 	
-	char _pad2[CACHE_LINE_SIZE];	//--? needed or not
-	atomic_int free_ptrs;	/**< number of free pointers remaining in the queue*/
-	
 	void *pointers[];	/**< Circular buffer. */	//--? confirm how it is different from void * pointers;, allocate whole mem to queue
 };
-
-struct queue_element {
-	_Atomic void * value;
-};
-
 
 /** Initiliaze a new queue and allocate memory. */
 int queue_init(struct queue *q, size_t len);
@@ -99,9 +91,12 @@ int queue_get_many(struct queue *q, void *ptrs[], size_t cnt);
 int queue_get(struct queue *q, void **ptr);
 
 /** Enqueue a new block at the tail of the queue. */
-int queue_push(struct queue *q, void *ptr);
+int queue_push(struct queue *q, void **ptr);
 
 /** Dequeue the first block at the head of the queue. */
 int queue_pull(struct queue *q, void **ptr);
+
+/** Return the number of free slots in a queue */
+int queue_free_slots(struct queue *q);
 
 #endif /* _QUEUE_H_ */

@@ -32,9 +32,9 @@
 
 int queue_init(struct queue *q, size_t len)
 {
-	//q->capacity = floor((len - sizeof(queue)) / sizeof(struct queue_element));
-	q->capacity = div(len - sizeof(q), sizeof(struct queue_element)).quot;
-	atomic_init(&q->free_ptrs, q->capacity - 1); /** One slot wasted to distinguish empty queue from full queue*/
+	if(len < sizeof(struct queue) + 2*sizeof(q->pointers[0]))
+		return -1;
+	q->capacity = (len - sizeof(struct queue)) / sizeof(q->pointers[0]) - 1;
 	
 	atomic_init(&q->tail, 0);
 	atomic_init(&q->head, 0);
@@ -50,69 +50,67 @@ void queue_destroy(struct queue *q)
 
 int queue_get(struct queue *q, void **ptr)
 {
-	*ptr = q->pointers[q->head % q->capacity];		//--? verify
-	return 0;
+	return queue_get_many(q, ptr, 1);
 }
 
-int queue_push(struct queue *q, void *ptr)
+int queue_push(struct queue *q, void **ptr)
 {
-	if(atomic_load(&q->free_ptrs) == 0)			//--? is atomic_load enough...other thread can make the value 0 after this check before pushing elem
-		return ENOMEM;							//--? should atomic_compare_exchange_weak be used
-	
-	struct queue_element * elem = (struct queue_element *) *(q->pointers);		//--? verify
-	//elem[atomic_load(&q->tail)].value = atomic_load(&ptr);
-	
-	if(atomic_load(&q->tail) == (q->capacity - 1) && atomic_load(&q->head) != 0) {	/** check if queue is full */
-		atomic_store(&elem[atomic_load(&q->tail)].value, ptr);
-		atomic_store(&q->tail, 0);
-	}
-	else if((atomic_load(&q->tail) + 1) != atomic_load(&q->head)) {	//--? is this check needed, if no free_ptrs then condition already fulfulled
-		atomic_store(&elem[atomic_load(&q->tail)].value, ptr);
-		atomic_fetch_add(&q->tail, 1);
-	}
-	else
-		return ENOMEM;
-	
-	atomic_fetch_sub(&q->free_ptrs, 1);
-	
-	return 0;
+	return queue_push_many(q, ptr, 1);
 }
 
 int queue_pull(struct queue *q, void **ptr)
 {
-	if(atomic_load(&q->free_ptrs) == (q->capacity - 1))		/** Queue empty*/
-		return -1;
-	
-	struct queue_element * elem = (struct queue_element *) *(q->pointers);		//--? verify
-	
-	if(atomic_load(&q->head) == (q->capacity - 1) && atomic_load(&q->tail) != (q->capacity - 1)) {	/** check if queue is empty */
-		//atomic_store(elem[atomic_load(q->tail)].value, ptr);
-		ptr = (void ** ) &elem[atomic_load(&q->head)].value;	//--? verify
-		atomic_store(&q->head, 0);
-	}
-	else if(atomic_load(&q->head) != atomic_load(&q->tail)) {
-		ptr = (void ** ) &elem[atomic_load(&q->head)].value;
-		atomic_fetch_add(&q->head, 1);
-	}
-	else
-		return ENOMEM;
-	
-	atomic_fetch_add(&q->free_ptrs, 1);
-	
-	return 0;
+	return queue_pull_many(q, ptr, 1);
 }
 
 int queue_get_many(struct queue *q, void *ptrs[], size_t cnt)
 {
-	return 0;
+	int filled_slots = q->capacity - queue_free_slots(q);
+	
+	if(cnt > filled_slots)
+		cnt = filled_slots;
+	
+	for(int i = 0; i < cnt; i++)
+		ptrs[i] = q->pointers[q->head % (q->capacity + 1)];
+	
+	return cnt;
 }
 
 int queue_push_many(struct queue *q, void **ptrs, size_t cnt)
 {
-	return 0;
+	//int free_slots = q->tail < q->head ? q->head - q->tail - 1 : q->head + (q->capacity - q->tail);
+	int free_slots = queue_free_slots(q);
+	
+	if(cnt > free_slots)
+		cnt = free_slots;
+	
+	for(int i = 0; i < cnt; i++) {
+		q->pointers[q->tail] = ptrs[i]; 			//--? alternate use (q->tail + i)%(q->capacity + 1) as index and update q->tail at the end of loop
+		q->tail = (q->tail + 1)%(q->capacity + 1);
+	}
+	
+	return cnt;
 }
 
 int queue_pull_many(struct queue *q, void **ptrs, size_t cnt)
 {
-	return 0;
+	int filled_slots = q->capacity - queue_free_slots(q);
+	
+	if(cnt > filled_slots)
+		cnt = filled_slots;
+	
+	for(int i = 0; i < cnt; i++) {
+		ptrs[i] = q->pointers[q->head];
+		q->head = (q->head + 1)%(q->capacity + 1);
+	}
+	
+	return cnt;
+}
+
+int queue_free_slots(struct queue *q)	//--? make this func inline
+{
+	if(q->tail < q->head)
+		return q->head - q->tail - 1;
+	else
+		return q->head + (q->capacity - q->tail);
 }
