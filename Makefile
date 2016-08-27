@@ -1,4 +1,4 @@
-TARGETS = test mpmc_test
+TARGETS = spsc_test mpmc_test
 CFLAGS = -Wall -std=c11
 
 ifdef DEBUG
@@ -11,7 +11,7 @@ endif
 
 all: $(TARGETS)
 
-test: test.o queue.o
+spsc_test: spsc_test.o spsc_queue.o
 	$(CC) $^ -Wall $(LIBS) -o $@
 
 mpmpc_test: mpmc_test.o
@@ -22,4 +22,4 @@ mpmpc_test: mpmc_test.o
 
 clean:
 	rm -f *.o
-	rm -f $(TARGET)
+	rm -f $(TARGETS)

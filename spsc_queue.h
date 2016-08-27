@@ -28,8 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _QUEUE_H_
-#define _QUEUE_H_
+#ifndef _SPSC_QUEUE_H_
+#define _SPSC_QUEUE_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -39,7 +39,7 @@
 /** Cache line size on modern x86 processors (in bytes) */
 #define CACHE_LINE_SIZE	64
 
-struct queue {
+struct spsc_queue {
 	size_t capacity;	/**< Total number of available pointers in queue::array */
 
 	/* Consumer part */
@@ -54,10 +54,10 @@ struct queue {
 };
 
 /** Initiliaze a new queue and allocate memory. */
-int queue_init(struct queue *q, size_t len);
+int spsc_queue_init(struct spsc_queue *q, size_t len);
 
 /** Release memory of queue. */
-void queue_destroy(struct queue *q);
+void spsc_queue_destroy(struct spsc_queue *q);
 
 /** Enqueue up to \p cnt elements from \p ptrs[] at the queue tail pointed by \p tail.
  *
@@ -71,7 +71,7 @@ void queue_destroy(struct queue *q);
  * @param cnt The length of the pointer array \p ptrs.
  * @return The function returns the number of successfully enqueued elements from \p ptrs.
  */
-int queue_push_many(struct queue *q, void *ptrs[], size_t cnt);
+int spsc_queue_push_many(struct spsc_queue *q, void *ptrs[], size_t cnt);
 
 /** Dequeue up to \p cnt elements from the queue and place them into the array \p ptrs[].
  *
@@ -81,33 +81,33 @@ int queue_push_many(struct queue *q, void *ptrs[], size_t cnt);
  * @param[in,out] head A pointer to a queue head. The value will be updated to reflect the new head.
  * @return The number of elements which have been dequeued.
  */
-int queue_pull_many(struct queue *q, void *ptrs[], size_t cnt);
+int spsc_queue_pull_many(struct spsc_queue *q, void *ptrs[], size_t cnt);
 
 /** Fill \p ptrs with \p cnt elements of the queue starting at entry \p pos. */
-int queue_get_many(struct queue *q, void *ptrs[], size_t cnt);
+int spsc_queue_get_many(struct spsc_queue *q, void *ptrs[], size_t cnt);
 
 /** Get the first element in the queue */
-static inline int queue_get(struct queue *q, void **ptr)
+static inline int spsc_queue_get(struct spsc_queue *q, void **ptr)
 {
-	return queue_get_many(q, ptr, 1);
+	return spsc_queue_get_many(q, ptr, 1);
 }
 
 /** Enqueue a new block at the tail of the queue. */
-static inline int queue_push(struct queue *q, void **ptr)
+static inline int spsc_queue_push(struct spsc_queue *q, void **ptr)
 {
-	return queue_push_many(q, ptr, 1);
+	return spsc_queue_push_many(q, ptr, 1);
 }
 
 /** Dequeue the first block at the head of the queue. */
-static inline int queue_pull(struct queue *q, void **ptr)
+static inline int spsc_queue_pull(struct spsc_queue *q, void **ptr)
 {
-	return queue_pull_many(q, ptr, 1);
+	return spsc_queue_pull_many(q, ptr, 1);
 }
 
 /** Return the number of free slots in a queue
  *
  * Note: This is only an estimate!
  */
-int queue_free_slots(struct queue *q);
+int spsc_queue_free_slots(struct spsc_queue *q);
 
-#endif /* _QUEUE_H_ */
+#endif /* _SPSC_QUEUE_H_ */

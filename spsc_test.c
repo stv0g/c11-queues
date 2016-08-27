@@ -10,7 +10,7 @@
  * We will fallback to a drop-in replacement which is based on pthreads.h */
 #include "c11threads.h"
 
-#include "queue.h"
+#include "spsc_queue.h"
 
 #define N 2000000
 
@@ -33,7 +33,7 @@ void * malloc_hp(size_t len)
 
 int producer(void *ctx)
 {
-	struct queue *q = (struct queue *) ctx;
+	struct spsc_queue *q = (struct spsc_queue *) ctx;
 	
 	/* Enqueue */
 	for (int count = 0, n1 = 0, n2 = 1, r; count < N; count++) {
@@ -41,7 +41,7 @@ int producer(void *ctx)
 		
 		void *fibptr = (void *) &fibs[count];
 		
-		r = queue_push(q, &fibptr);
+		r = spsc_queue_push(q, &fibptr);
 		if (r != 1) {
 			printf("Queue push failed\n");
 			return -1;
@@ -55,14 +55,14 @@ int producer(void *ctx)
 
 int consumer(void *ctx)
 {
-	struct queue *q = (struct queue *) ctx;
+	struct spsc_queue *q = (struct spsc_queue *) ctx;
 	
 	/* Dequeue */
 	for (int count = 0, n1 = 0, n2 = 1, r; count < N; count++) {
 		int fib = n1 + n2;
 		int *pulled;
 
-		r = queue_pull(q, (void **) &pulled);
+		r = spsc_queue_pull(q, (void **) &pulled);
 		if (r != 1) {
 			printf("Queue pull failed: %d\n", r);
 			return -1;
@@ -80,7 +80,7 @@ int consumer(void *ctx)
 	return 0;
 }
 
-int test_single_threaded(struct queue *q)
+int test_single_threaded(struct spsc_queue *q)
 {
 	int resp, resc;
 	
@@ -100,7 +100,7 @@ int test_single_threaded(struct queue *q)
 	return 0;
 }
 
-int test_multi_threaded(struct queue *q)
+int test_multi_threaded(struct spsc_queue *q)
 {
 	thrd_t thrp, thrc;
 	int resp, resc;
@@ -119,16 +119,15 @@ int test_multi_threaded(struct queue *q)
 	return 0;
 }
 
-void queue_info(struct queue *q) 
+void queue_info(struct spsc_queue *q) 
 {
-	printf("Queue tail %d, queue head %d, queue capacity %lu, Queue free slots %d\n", q->tail, q->head, q->capacity, queue_free_slots(q));
-	return;
+	printf("Queue tail %d, queue head %d, queue capacity %lu, Queue free slots %d\n", q->tail, q->head, q->capacity, spsc_queue_free_slots(q));
 }
 
 int main(int argc, char *argv[])
 {
 	void * hp;
-	struct queue *q;
+	struct spsc_queue *q;
 	size_t len;
 	
 	len = 16 << 20; // 16 MiB
@@ -141,7 +140,7 @@ int main(int argc, char *argv[])
 	
 	q = hp;
 
-	if (queue_init(q, len)) {
+	if (spsc_queue_init(q, len)) {
 		printf("Error in initialization\n");
 		return -1;
 	}
