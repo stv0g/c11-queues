@@ -87,15 +87,27 @@ int queue_pull_many(struct queue *q, void *ptrs[], size_t cnt);
 int queue_get_many(struct queue *q, void *ptrs[], size_t cnt);
 
 /** Get the first element in the queue */
-int queue_get(struct queue *q, void **ptr);
+static inline int queue_get(struct queue *q, void **ptr)
+{
+	return queue_get_many(q, ptr, 1);
+}
 
 /** Enqueue a new block at the tail of the queue. */
-int queue_push(struct queue *q, void **ptr);
+static inline int queue_push(struct queue *q, void **ptr)
+{
+	return queue_push_many(q, ptr, 1);
+}
 
 /** Dequeue the first block at the head of the queue. */
-int queue_pull(struct queue *q, void **ptr);
+static inline int queue_pull(struct queue *q, void **ptr)
+{
+	return queue_pull_many(q, ptr, 1);
+}
 
-/** Return the number of free slots in a queue */
+/** Return the number of free slots in a queue
+ *
+ * Note: This is only an estimate!
+ */
 int queue_free_slots(struct queue *q);
 
 #endif /* _QUEUE_H_ */

@@ -48,21 +48,6 @@ void queue_destroy(struct queue *q)
 	return;
 }
 
-int queue_get(struct queue *q, void **ptr)
-{
-	return queue_get_many(q, ptr, 1);
-}
-
-int queue_push(struct queue *q, void **ptr)
-{
-	return queue_push_many(q, ptr, 1);
-}
-
-int queue_pull(struct queue *q, void **ptr)
-{
-	return queue_pull_many(q, ptr, 1);
-}
-
 int queue_get_many(struct queue *q, void *ptrs[], size_t cnt)
 {
 	int filled_slots = q->capacity - queue_free_slots(q);
