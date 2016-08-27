@@ -31,39 +31,42 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdint.h>
 #include <stdatomic.h>
 
 static size_t const cacheline_size = 64;
 typedef char cacheline_pad_t[cacheline_size];
+typedef void *(*allocator_t)(size_t);
 
-struct mpmc_bounded_queue {
+struct mpmc_queue {
+	cacheline_pad_t _pad0;
+
 	struct cell {
 		atomic_size_t sequence;
 		void *data;
-	};
+	} *buffer;
 
-	cacheline_pad_t _pad0;
-	struct cell * const buffer;
-	size_t const buffer_mask;
+	size_t buffer_mask;
 
 	cacheline_pad_t	_pad1;
 	atomic_size_t	enqueue_pos;
 	cacheline_pad_t	_pad2;
 	atomic_size_t	dequeue_pos;
 	cacheline_pad_t	_pad3;
-}
+};
 
-int mpmc_queue_init(struct queue *q, size_t size)
-{
-	q->buffer = malloc(sizeof(struct cell_t) * size);
-	if (!q->buffer)
-		return -ENOMEM;
-	
+int mpmc_queue_init(struct mpmc_queue *q, size_t size, allocator_t alloc)
+{	
 	/* Queue size must be 2 exponent */
+	if ((size < 2) || ((size & (size - 1)) != 0))
+		return -1;
+
 	q->buffer_mask = size - 1;
-	assert((q->buffer_size >= 2) && ((q->buffer_size & (q->buffer_size - 1)) == 0));
+	q->buffer = alloc(sizeof(struct cell) * size);
+	if (!q->buffer)
+		return -2;
 	
-	for (size_t i = 0; i != q->buffer_size; i += 1)
+	for (size_t i = 0; i != size; i += 1)
 		atomic_store_explicit(&q->buffer[i].sequence, i, memory_order_relaxed);
 
 	atomic_store_explicit(&q->enqueue_pos, 0, memory_order_relaxed);
@@ -72,12 +75,12 @@ int mpmc_queue_init(struct queue *q, size_t size)
 	return 0;
 }
 
-void mpmc_queue_destroy(struct queue *q)
+void mpmc_queue_destroy(struct mpmc_queue *q)
 {
 	free(q->buffer);
 }
 
-int mpmc_queue_push(struct queue *q, void *ptr)
+int mpmc_queue_push(struct mpmc_queue *q, void *ptr)
 {
 	struct cell *cell;
 	size_t pos, seq;
@@ -90,13 +93,13 @@ int mpmc_queue_push(struct queue *q, void *ptr)
 		diff = (intptr_t) seq - (intptr_t) pos;
 
 		if (diff == 0) {
-			if (atomic_compare_exchange_weak(&q->enqueue_pos, pos, pos + 1, memory_order_relaxed))
+			if (atomic_compare_exchange_weak_explicit(&q->enqueue_pos, &pos, pos + 1, memory_order_relaxed, memory_order_seq_cst))
 				break;
 		}
 		else if (diff < 0)
-			return false;
+			return 0;
 		else
-			pos = atomic_load_explicit(&enqueue_pos, memory_order_relaxed);
+			pos = atomic_load_explicit(&q->enqueue_pos, memory_order_relaxed);
 	}
 
 	cell->data = ptr;
@@ -105,7 +108,7 @@ int mpmc_queue_push(struct queue *q, void *ptr)
 	return 1;
 }
 
-bool mpmc_queue_pull(struct queue *q, void **ptr)
+int mpmc_queue_pull(struct mpmc_queue *q, void **ptr)
 {
 	struct cell *cell;
 	size_t pos, seq;
@@ -119,11 +122,11 @@ bool mpmc_queue_pull(struct queue *q, void **ptr)
 		diff = (intptr_t) seq - (intptr_t) (pos + 1);
 
 		if (diff == 0) {
-			if (atomic_compare_exchange_weak(&q->dequeue_pos, pos, pos + 1, memory_order_relaxed))
+			if (atomic_compare_exchange_weak_explicit(&q->dequeue_pos, &pos, pos + 1, memory_order_relaxed, memory_order_seq_cst))
 				break;
 		}
 		else if (diff < 0)
-			return false;
+			return 0;
 		else
 			pos = atomic_load_explicit(&q->dequeue_pos, memory_order_relaxed);
 	}
@@ -131,5 +134,5 @@ bool mpmc_queue_pull(struct queue *q, void **ptr)
 	*ptr = cell->data;
 	atomic_store_explicit(&cell->sequence, pos + q->buffer_mask + 1, memory_order_release);
 
-	return true;
+	return 1;
 }

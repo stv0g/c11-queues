@@ -1,4 +1,4 @@
-TARGET = test
+TARGETS = test mpmc_test
 CFLAGS = -Wall -std=c11
 
 ifdef DEBUG
@@ -9,18 +9,16 @@ endif
 
 .PHONY: all clean
 
-all: $(TARGET)
+all: $(TARGETS)
 
-OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c))
-HEADERS = $(wildcard *.h)
+test: test.o queue.o
+	$(CC) $^ -Wall $(LIBS) -o $@
 
-%.o: %.c $(HEADERS)
+mpmpc_test: mpmc_test.o
+	$(CC) $^ -Wall $(LIBS) -o $@
+
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-
-.PRECIOUS: $(TARGET) $(OBJECTS)
-
-$(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) -Wall $(LIBS) -o $@
 
 clean:
 	rm -f *.o
