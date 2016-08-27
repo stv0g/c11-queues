@@ -1,14 +1,15 @@
-#Makefile source: http://stackoverflow.com/questions/1484817/how-do-i-make-a-simple-makefile-for-gcc-on-linux
+TARGET = test
+CFLAGS = -Wall -std=c11
 
-TARGET = queue_test
-LIBS = -lm -pthread
-CC = gcc
-CFLAGS = -g -Wall
+ifdef DEBUG
+	CFLAGS += -g -O0
+else
+	CFLAGS += -O3
+endif 
 
-.PHONY: default all clean
+.PHONY: all clean
 
-default: $(TARGET)
-all: default
+all: $(TARGET)
 
 OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c))
 HEADERS = $(wildcard *.h)
@@ -22,5 +23,5 @@ $(TARGET): $(OBJECTS)
 	$(CC) $(OBJECTS) -Wall $(LIBS) -o $@
 
 clean:
-	-rm -f *.o
-	-rm -f $(TARGET)
+	rm -f *.o
+	rm -f $(TARGET)
