@@ -3,4 +3,5 @@
 *.so
 *~
 
-test
+spsc_test
+mpmc_test

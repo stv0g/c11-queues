@@ -1,15 +1,10 @@
-# Lock-free Single-Producer Single-consumer (SPSC) queue
+# Lock-free queues for C11
 
-This Git repository tries to implement a lightweight SPSC queue in C11.
-
-**State is currently WIP**
-
-## Design decissions
-
- - Static indexed ring buffer or dynamically linked-lists?
+This Git repository contains lightweight simple implementation of lockless SPSC and MPMC queues.
 
 ## Some reading material
 
+- https://github.com/rigtorp/awesome-lockfree
 - http://moodycamel.com/blog/2013/a-fast-lock-free-queue-for-c++
 - http://www.1024cores.net/home/lock-free-algorithms/queues/unbounded-spsc-queue
 - http://www.1024cores.net/home/lock-free-algorithms/queues/non-intrusive-mpsc-node-based-queue
