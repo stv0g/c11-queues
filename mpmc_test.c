@@ -23,11 +23,13 @@
 #include "mpmc_queue.h"
 
 size_t const thread_count = 4;
-size_t const batch_size = 1;
-size_t const iter_count = 2000000;
+size_t const batch_size = 10;
+size_t const iter_count = 20000000;
+size_t const queue_size = 1 << 20;
 
 int volatile g_start = 0;
 
+/** Allocate memory backed by hugepages with malloc() like interface */
 void * malloc_hp(size_t len)
 {
 	int prot = PROT_READ | PROT_WRITE;
@@ -40,6 +42,24 @@ void * malloc_hp(size_t len)
 #endif
 	
 	return mmap(NULL, len, prot, flags, -1, 0);
+}
+
+int free_hp(void *ptr, size_t sz)
+{
+	return munmap(ptr, sz);
+}
+
+/** Get thread id as integer
+ * In contrast to pthread_t which is an opaque type */
+uint64_t thread_get_id()
+{
+#ifdef __MACH__
+	uint64_t id;
+	pthread_threadid_np(pthread_self(), &id);
+	return id;
+#elif defined(__linux__)
+	return (int) gettid();
+#endif
 }
 
 /** Get CPU timestep counter */
@@ -57,20 +77,10 @@ __attribute__((always_inline)) static inline uint64_t rdtscp()
 	return tsc;
 }
 
+/** Sleep, do nothing */
 __attribute__((always_inline)) static inline void nop()
 {
 	__asm__("rep nop;");
-}
-
-uint64_t thread_get_id()
-{
-#ifdef __MACH__
-	uint64_t id;
-	pthread_threadid_np(pthread_self(), &id);
-	return id;
-#elif defined(__linux__)
-	return (int) gettid();
-#endif
 }
 
 int thread_func(void *ctx)
@@ -109,8 +119,9 @@ int main()
 {
 	struct mpmc_queue queue;
 	thrd_t threads[thread_count];
+	int ret;
 	
-	mpmc_queue_init(&queue, 1024, malloc_hp);
+	mpmc_queue_init(&queue, queue_size, malloc_hp, free_hp);
 
 	for (int i = 0; i != thread_count; ++i)
 		thrd_create(&threads[i], thread_func, &queue);
@@ -126,4 +137,14 @@ int main()
 	uint64_t end = rdtscp();
 	
 	printf("cycles/op = %llu\n", (end - start) / (batch_size * iter_count * 2 * thread_count));
+	
+	size_t used = mpmc_queue_capacity(&queue);
+	if (used > 0)
+		printf("%zu slots in use? There is something wrong with the test\n", used);
+	
+	ret = mpmc_queue_destroy(&queue);
+	if (ret)
+		printf("Failed to destroy queue: %d", ret);
+	
+	return 0;
 }
