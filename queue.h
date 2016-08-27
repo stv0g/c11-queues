@@ -33,7 +33,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdatomic.h>
 #include <errno.h>
 
