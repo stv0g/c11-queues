@@ -5,7 +5,7 @@ ifdef DEBUG
 	CFLAGS += -g -O0
 else
 	CFLAGS += -O3
-endif 
+endif
 
 .PHONY: all clean
 
