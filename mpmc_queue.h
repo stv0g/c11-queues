@@ -74,13 +74,8 @@ int mpmc_queue_push(struct mpmc_queue *q, void *ptr);
 
 int mpmc_queue_pull(struct mpmc_queue *q, void **ptr);
 
-/* Peek into the next element to be dequeued */
-int mpmc_queue_get(struct mpmc_queue *q, void **ptr);
-
 int mpmc_queue_push_many(struct mpmc_queue *q, void *ptr[], size_t cnt);
 
 int mpmc_queue_pull_many(struct mpmc_queue *q, void **ptr[], size_t cnt);
-
-int mpmc_queue_get_many(struct mpmc_queue *q, void **ptr[], size_t cnt);
 
 #endif /* _MPMC_QUEUE_H_ */

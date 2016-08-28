@@ -128,12 +128,6 @@ int mpmc_queue_pull(struct mpmc_queue *q, void **ptr)
 	return 1;
 }
 
-/* Peek into the next element to be dequeued */
-int mpmc_queue_get(struct mpmc_queue *q, void **ptr)
-{
-	return -1;
-}
-
 int mpmc_queue_push_many(struct mpmc_queue *q, void *ptr[], size_t cnt)
 {
 	int ret;
@@ -160,9 +154,4 @@ int mpmc_queue_pull_many(struct mpmc_queue *q, void **ptr[], size_t cnt)
 	}
 	
 	return i;
-}
-
-int mpmc_queue_get_many(struct mpmc_queue *q, void **ptr[], size_t cnt)
-{
-	return -1;
 }
