@@ -11,10 +11,10 @@ endif
 
 all: $(TARGETS)
 
-spsc_test: spsc_test.o spsc_queue.o
+spsc_test: spsc_test.o spsc_queue.o memory.o
 	$(CC) $^ -Wall $(LIBS) -o $@
 
-mpmpc_test: mpmc_test.o
+mpmc_test: mpmc_test.o mpmc_queue.o memory.o
 	$(CC) $^ -Wall $(LIBS) -o $@
 
 %.o: %.c
