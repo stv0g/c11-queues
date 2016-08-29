@@ -30,16 +30,23 @@
 
 #include "spsc_queue.h"
 
-int spsc_queue_init(struct spsc_queue *q, size_t len)
+void * spsc_queue_init(struct spsc_queue *q, size_t size, const struct memtype *mem)
 {
-	if(len < sizeof(struct spsc_queue) + 2*sizeof(q->pointers[0]))
+	if(size < sizeof(struct spsc_queue) + 2*sizeof(q->pointers[0]))
 		return -1;
-	q->capacity = (len - sizeof(struct spsc_queue)) / sizeof(q->pointers[0]) - 1;
+	
+	/* Queue size must be 2 exponent */
+	if ((size < 2) || ((size & (size - 1)) != 0))
+		return NULL;
+	
+	q = memory_alloc(mem, sizeof(struct spsc_queue) + sizeof(q->pointers[0]) * size);
+	
+	q->capacity = size - 1;
 	
 	atomic_init(&q->tail, 0);
 	atomic_init(&q->head, 0);
 
-	return 0;
+	return q;
 }
 
 void spsc_queue_destroy(struct spsc_queue *q)
@@ -50,7 +57,7 @@ void spsc_queue_destroy(struct spsc_queue *q)
 
 int spsc_queue_get_many(struct spsc_queue *q, void *ptrs[], size_t cnt)
 {
-	int filled_slots = q->capacity - spsc_queue_free_slots(q);
+	int filled_slots = q->capacity - spsc_queue_available(q);
 	
 	if(cnt > filled_slots)
 		cnt = filled_slots;
@@ -64,7 +71,7 @@ int spsc_queue_get_many(struct spsc_queue *q, void *ptrs[], size_t cnt)
 int spsc_queue_push_many(struct spsc_queue *q, void **ptrs, size_t cnt)
 {
 	//int free_slots = q->tail < q->head ? q->head - q->tail - 1 : q->head + (q->capacity - q->tail);
-	int free_slots = spsc_queue_free_slots(q);
+	int free_slots = spsc_queue_available(q);
 	
 	if(cnt > free_slots)
 		cnt = free_slots;
@@ -79,7 +86,7 @@ int spsc_queue_push_many(struct spsc_queue *q, void **ptrs, size_t cnt)
 
 int spsc_queue_pull_many(struct spsc_queue *q, void **ptrs, size_t cnt)
 {
-	int filled_slots = q->capacity - spsc_queue_free_slots(q);
+	int filled_slots = q->capacity - spsc_queue_available(q);
 	
 	if(cnt > filled_slots)
 		cnt = filled_slots;
@@ -92,7 +99,7 @@ int spsc_queue_pull_many(struct spsc_queue *q, void **ptrs, size_t cnt)
 	return cnt;
 }
 
-int spsc_queue_free_slots(struct spsc_queue *q)	//--? make this func inline
+int spsc_queue_available(struct spsc_queue *q)	//--? make this func inline
 {
 	if(q->tail < q->head)
 		return q->head - q->tail - 1;

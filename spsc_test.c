@@ -17,20 +17,6 @@
 /* Static global storage */
 int fibs[N];
 
-void * malloc_hp(size_t len)
-{
-	int prot = PROT_READ | PROT_WRITE;
-	int flags = MAP_PRIVATE | MAP_ANONYMOUS;
-	
-#ifdef __MACH__
-	flags |= VM_FLAGS_SUPERPAGE_SIZE_2MB;
-#elif defined(__linux__)
-	flags |= MAP_HUGETLB | MAP_LOCKED;
-#endif
-	
-	return mmap(NULL, len, prot, flags, -1, 0);
-}
-
 int producer(void *ctx)
 {
 	struct spsc_queue *q = (struct spsc_queue *) ctx;
@@ -121,26 +107,17 @@ int test_multi_threaded(struct spsc_queue *q)
 
 void queue_info(struct spsc_queue *q) 
 {
-	printf("Queue tail %d, queue head %d, queue capacity %lu, Queue free slots %d\n", q->tail, q->head, q->capacity, spsc_queue_free_slots(q));
+	printf("Queue tail %d, queue head %d, queue capacity %lu, Queue free slots %d\n", q->tail, q->head, q->capacity, spsc_queue_available(q));
 }
 
 int main(int argc, char *argv[])
 {
-	void * hp;
 	struct spsc_queue *q;
-	size_t len;
+	size_t queue_size = 1 << 20; // 16 MiB;
 	
-	len = 16 << 20; // 16 MiB
+	q = spsc_queue_init(q, queue_size, &memtype_hugepage);
 	
-	hp = malloc_hp(len);
-	if (hp == MAP_FAILED) {
-		printf("Memory assignment error\n");
-		return -1;
-	}
-	
-	q = hp;
-
-	if (spsc_queue_init(q, len)) {
+	if (q) {		//--? pass &q ....**ptr 
 		printf("Error in initialization\n");
 		return -1;
 	}

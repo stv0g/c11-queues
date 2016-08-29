@@ -36,25 +36,29 @@
 #include <stdatomic.h>
 #include <errno.h>
 
+#include "memory.h"
+
 /** Cache line size on modern x86 processors (in bytes) */
 #define CACHE_LINE_SIZE	64
 
-struct spsc_queue {
-	size_t capacity;	/**< Total number of available pointers in queue::array */
+typedef char cacheline_pad_t[CACHE_LINE_SIZE];
 
+struct spsc_queue {
+	cacheline_pad_t _pad0;
+	struct memtype const * mem;
+	size_t capacity;	/**< Total number of available pointers in queue::array */
+	
 	/* Consumer part */
 	atomic_int tail;	/**< Tail pointer of queue*/
-	
-	char _pad[CACHE_LINE_SIZE];
-	
+	cacheline_pad_t _pad1;
 	/* Producer part */
-	atomic_int head;	/**< */
+	atomic_int head;	/**< Head pointer of queue*/
 	
-	void *pointers[];	/**< Circular buffer. */	//--? confirm how it is different from void * pointers;, allocate whole mem to queue
+	void *pointers[];	/**< Circular buffer. */
 };
 
 /** Initiliaze a new queue and allocate memory. */
-int spsc_queue_init(struct spsc_queue *q, size_t len);
+void * spsc_queue_init(struct spsc_queue *q, size_t size, const struct memtype *mem);
 
 /** Release memory of queue. */
 void spsc_queue_destroy(struct spsc_queue *q);
@@ -108,6 +112,6 @@ static inline int spsc_queue_pull(struct spsc_queue *q, void **ptr)
  *
  * Note: This is only an estimate!
  */
-int spsc_queue_free_slots(struct spsc_queue *q);
+int spsc_queue_available(struct spsc_queue *q);
 
 #endif /* _SPSC_QUEUE_H_ */
