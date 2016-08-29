@@ -68,7 +68,7 @@ int mpmc_queue_destroy(struct mpmc_queue *q);
  * Note: This is only an estimation and not accurate as long other
  *       threads are performing operations.
  */ 
-size_t mpmc_queue_capacity(struct mpmc_queue *q);
+size_t mpmc_queue_available(struct mpmc_queue *q);
 
 int mpmc_queue_push(struct mpmc_queue *q, void *ptr);
 
