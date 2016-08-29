@@ -1,4 +1,3 @@
-#include <sys/mman.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -8,11 +7,6 @@
  * We will fallback to a drop-in replacement which is based on pthreads.h */
 #include "c11threads.h"
 
-/* Required to allocate hugepages on Apple OS X */
-#ifdef __MACH__
-  #include <mach/vm_statistics.h>
-#endif
-
 /* For thread_get_id() */
 #ifdef __MACH__
   #include <pthread.h>
@@ -21,6 +15,7 @@
 #endif
 
 #include "mpmc_queue.h"
+#include "memory.h"
 
 size_t const thread_count = 4;
 size_t const batch_size = 10;
@@ -28,26 +23,6 @@ size_t const iter_count = 20000000;
 size_t const queue_size = 1 << 20;
 
 int volatile g_start = 0;
-
-/** Allocate memory backed by hugepages with malloc() like interface */
-void * malloc_hp(size_t len)
-{
-	int prot = PROT_READ | PROT_WRITE;
-	int flags = MAP_PRIVATE | MAP_ANONYMOUS;
-	
-#ifdef __MACH__
-	flags |= VM_FLAGS_SUPERPAGE_SIZE_2MB;
-#elif defined(__linux__)
-	flags |= MAP_HUGETLB | MAP_LOCKED;
-#endif
-	
-	return mmap(NULL, len, prot, flags, -1, 0);
-}
-
-int free_hp(void *ptr, size_t sz)
-{
-	return munmap(ptr, sz);
-}
 
 /** Get thread id as integer
  * In contrast to pthread_t which is an opaque type */
@@ -121,7 +96,7 @@ int main()
 	thrd_t threads[thread_count];
 	int ret;
 	
-	mpmc_queue_init(&queue, queue_size, malloc_hp, free_hp);
+	mpmc_queue_init(&queue, queue_size, &memtype_hugepage);
 
 	for (int i = 0; i != thread_count; ++i)
 		thrd_create(&threads[i], thread_func, &queue);
