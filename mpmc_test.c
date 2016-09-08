@@ -113,7 +113,7 @@ int main()
 	
 	printf("cycles/op = %llu\n", (end - start) / (batch_size * iter_count * 2 * thread_count));
 	
-	size_t used = mpmc_queue_capacity(&queue);
+	size_t used = mpmc_queue_available(&queue);
 	if (used > 0)
 		printf("%zu slots in use? There is something wrong with the test\n", used);
 	
