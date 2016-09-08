@@ -43,7 +43,7 @@
 
 struct node
 {
-	struct node* next_;
+	struct node* _Atomic next_;
 	void *value_;
 };
 
@@ -54,7 +54,7 @@ struct spsc_ub_queue
 	
 	// consumer part 
 	// accessed mainly by consumer, infrequently be producer 
-	struct node* tail_; // tail of the queue 
+	struct node* _Atomic tail_; // tail of the queue 
 
 	// delimiter between consumer part and producer part, 
 	// so that they situated on different cache lines 
@@ -62,9 +62,9 @@ struct spsc_ub_queue
 
 	// producer part 
 	// accessed only by producer 
-	struct node* head_; // head of the queue 
-	struct node* first_; // last unused node (tail of node cache) 
-	struct node* tail_copy_; // helper (points somewhere between first_ and tail_)
+	struct node* _Atomic head_; // head of the queue 
+	struct node* _Atomic first_; // last unused node (tail of node cache) 
+	struct node* _Atomic tail_copy_; // helper (points somewhere between first_ and tail_)
 };
 
 void spsc_ub_queue_init(struct spsc_ub_queue* q, size_t size, const struct memtype *mem);
