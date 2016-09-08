@@ -5,3 +5,4 @@
 
 spsc_test
 mpmc_test
+spsc_port_test
