@@ -13,7 +13,7 @@ endif
 
 all: $(TARGETS)
 
-spsc_port_test: spsc_port_test.o
+spsc_port_test: spsc_port_test.o unbounded_spsc.o memory.o
 	$(CC) $^ -Wall $(LIBS) -o $@
 
 #mpmc_test: mpmc_test.o mpmc_queue.o memory.o
