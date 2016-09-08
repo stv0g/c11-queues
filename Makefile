@@ -1,4 +1,4 @@
-TARGETS = spsc_port_test
+TARGETS = spsc_ub_test mpmc_test
 CFLAGS = -Wall -std=c11
 
 DEBUG ?= 1
@@ -13,11 +13,11 @@ endif
 
 all: $(TARGETS)
 
-spsc_port_test: spsc_port_test.o unbounded_spsc.o memory.o
+spsc_ub_test: spsc_ub_test.o spsc_ub_queue.o memory.o
 	$(CC) $^ -Wall $(LIBS) -o $@
 
-#mpmc_test: mpmc_test.o mpmc_queue.o memory.o
-#	$(CC) $^ -Wall $(LIBS) -o $@
+mpmc_test: mpmc_test.o mpmc_queue.o memory.o
+	$(CC) $^ -Wall $(LIBS) -o $@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@

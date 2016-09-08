@@ -3,6 +3,6 @@
 *.so
 *~
 
+spsc_ub_test
 spsc_test
 mpmc_test
-spsc_port_test
