@@ -1,4 +1,4 @@
-TARGETS = spsc_test mpmc_test
+TARGETS = spsc_port_test
 CFLAGS = -Wall -std=c11
 
 ifdef DEBUG
@@ -11,11 +11,11 @@ endif
 
 all: $(TARGETS)
 
-spsc_test: spsc_test.o spsc_queue.o memory.o
+spsc_port_test: main.o
 	$(CC) $^ -Wall $(LIBS) -o $@
 
-mpmc_test: mpmc_test.o mpmc_queue.o memory.o
-	$(CC) $^ -Wall $(LIBS) -o $@
+#mpmc_test: mpmc_test.o mpmc_queue.o memory.o
+#	$(CC) $^ -Wall $(LIBS) -o $@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
