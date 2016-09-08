@@ -38,43 +38,43 @@
 
 #include "memory.h"
 
-// cache line size on modern x86 processors (in bytes)
-#define CACHE_LINE_SIZE 64
+static size_t const cacheline_size = 64;
+typedef char cacheline_pad_t[cacheline_size];
 
-struct node
-{
-	struct node* _Atomic next_;
-	void *value_;
+struct node {
+	struct node * _Atomic _next;		/**> Single linked list of nodes */
+	void *_value;
 };
 
 struct spsc_ub_queue 
 {
-	struct memtype const * mem;
-	char cache_line_pad_0_ [CACHE_LINE_SIZE];
+	struct memtype const *mem;		/**> Memory type to use for allocations of new nodes. */
 	
-	// consumer part 
-	// accessed mainly by consumer, infrequently be producer 
-	struct node* _Atomic tail_; // tail of the queue 
+	/** Delimiter between consumer part and producer part, 
+	 * so that they situated on different cache lines */
+	cacheline_pad_t _pad0;	
 
-	// delimiter between consumer part and producer part, 
-	// so that they situated on different cache lines 
-	char cache_line_pad_ [CACHE_LINE_SIZE]; 
+	/* Consumer part 
+	 * accessed mainly by consumer, infrequently be producer */
+	struct node* _Atomic _tail; 		/**> Tail of the queue. */
 
-	// producer part 
-	// accessed only by producer 
-	struct node* _Atomic head_; // head of the queue 
-	struct node* _Atomic first_; // last unused node (tail of node cache) 
-	struct node* _Atomic tail_copy_; // helper (points somewhere between first_ and tail_)
+	cacheline_pad_t _pad1;
+
+	/* Producer part 
+	 * accessed only by producer */
+	struct node* _Atomic _head;		/**> Head of the queue. */
+	struct node* _Atomic _first;		/**> Last unused node (tail of node cache). */
+	struct node* _Atomic _tailcopy;	/**> Helper which points somewhere between _first and _tail */
 };
 
-void spsc_ub_queue_init(struct spsc_ub_queue* q, size_t size, const struct memtype *mem);
+void spsc_ub_queue_init(struct spsc_ub_queue *q, size_t size, const struct memtype *mem);
 
-void spsc_ub_queue_destroy(struct spsc_ub_queue* q);
+void spsc_ub_queue_destroy(struct spsc_ub_queue *q);
 
-struct node* spsc_ub_alloc_node(struct spsc_ub_queue* q);
+struct node * spsc_ub_alloc_node(struct spsc_ub_queue *q);
 
-void spsc_ub_enqueue(struct spsc_ub_queue* q, void * v);
+void spsc_ub_enqueue(struct spsc_ub_queue *q, void *v);
 
-int spsc_ub_dequeue(struct spsc_ub_queue* q, void** v);
+int spsc_ub_dequeue(struct spsc_ub_queue *q, void **v);
 
 #endif /* _SPSC_UB_QUEUE_H_ */
