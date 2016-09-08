@@ -58,7 +58,7 @@ struct spsc_queue {
 };
 
 /** Initiliaze a new queue and allocate memory. */
-void * spsc_queue_init(struct spsc_queue *q, size_t size, const struct memtype *mem);
+void * spsc_queue_init(size_t size, const struct memtype *mem);
 
 /** Release memory of queue. */
 void spsc_queue_destroy(struct spsc_queue *q);

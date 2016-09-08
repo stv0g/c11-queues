@@ -1,7 +1,7 @@
 /** Lock-free Single-Producer Single-consumer (SPSC) queue.
  *
- * @author Steffen Vogel <post@steffenvogel.de>
- * @copyright 2016 Steffen Vogel
+ * @author Umar Farooq
+ * @copyright 2016 Umar Farooq
  * @license BSD 2-Clause License
  * 
  * All rights reserved.
@@ -30,10 +30,12 @@
 
 #include "spsc_queue.h"
 
-void * spsc_queue_init(struct spsc_queue *q, size_t size, const struct memtype *mem)
+void * spsc_queue_init(size_t size, const struct memtype *mem)
 {
-	if(size < sizeof(struct spsc_queue) + 2*sizeof(q->pointers[0]))
-		return -1;
+	struct spsc_queue *q;
+	
+	if (size < sizeof(struct spsc_queue) + 2 * sizeof(q->pointers[0]))
+		return NULL;
 	
 	/* Queue size must be 2 exponent */
 	if ((size < 2) || ((size & (size - 1)) != 0))
@@ -59,10 +61,10 @@ int spsc_queue_get_many(struct spsc_queue *q, void *ptrs[], size_t cnt)
 {
 	int filled_slots = q->capacity - spsc_queue_available(q);
 	
-	if(cnt > filled_slots)
+	if (cnt > filled_slots)
 		cnt = filled_slots;
 	
-	for(int i = 0; i < cnt; i++)
+	for (int i = 0; i < cnt; i++)
 		ptrs[i] = q->pointers[q->head % (q->capacity + 1)];
 	
 	return cnt;
@@ -73,10 +75,10 @@ int spsc_queue_push_many(struct spsc_queue *q, void **ptrs, size_t cnt)
 	//int free_slots = q->tail < q->head ? q->head - q->tail - 1 : q->head + (q->capacity - q->tail);
 	int free_slots = spsc_queue_available(q);
 	
-	if(cnt > free_slots)
+	if (cnt > free_slots)
 		cnt = free_slots;
 	
-	for(int i = 0; i < cnt; i++) {
+	for (int i = 0; i < cnt; i++) {
 		q->pointers[q->tail] = ptrs[i]; 			//--? alternate use (q->tail + i)%(q->capacity + 1) as index and update q->tail at the end of loop
 		q->tail = (q->tail + 1)%(q->capacity + 1);
 	}
@@ -88,10 +90,10 @@ int spsc_queue_pull_many(struct spsc_queue *q, void **ptrs, size_t cnt)
 {
 	int filled_slots = q->capacity - spsc_queue_available(q);
 	
-	if(cnt > filled_slots)
+	if (cnt > filled_slots)
 		cnt = filled_slots;
 	
-	for(int i = 0; i < cnt; i++) {
+	for (int i = 0; i < cnt; i++) {
 		ptrs[i] = q->pointers[q->head];
 		q->head = (q->head + 1)%(q->capacity + 1);
 	}
@@ -101,7 +103,7 @@ int spsc_queue_pull_many(struct spsc_queue *q, void **ptrs, size_t cnt)
 
 int spsc_queue_available(struct spsc_queue *q)	//--? make this func inline
 {
-	if(q->tail < q->head)
+	if (q->tail < q->head)
 		return q->head - q->tail - 1;
 	else
 		return q->head + (q->capacity - q->tail);
