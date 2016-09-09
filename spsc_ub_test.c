@@ -14,7 +14,7 @@
 
 /* Usage example */
 
-#define N 20
+#define N 20000000
 
 /* Static global storage */
 int fibs[N];
@@ -25,13 +25,12 @@ int producer(void *ctx)
 	struct spsc_ub_queue *q = (struct spsc_ub_queue *) ctx;
 	
 	/* Enqueue */
-	for (int count = 0, n1 = 0, n2 = 1, r; count < N; count++) {
+	for (unsigned long count = 0, n1 = 0, n2 = 1; count < N; count++) {
 		fibs[count] = n1 + n2;
 		
 		void *fibptr = (void *) &fibs[count];
 		
-		r = spsc_ub_push(q, fibptr);
-		if (r) {
+		if (spsc_ub_push(q, fibptr)) {
 			printf("Queue push failed\n");
 			return -1;
 		}
@@ -44,18 +43,17 @@ int producer(void *ctx)
 
 int consumer(void *ctx)
 {
-	printf("consumer\n"); //DELETEME
+	printf("consumer\n"); 	//DELETEME
 	struct spsc_ub_queue *q = (struct spsc_ub_queue *) ctx;
 	
 	/* Dequeue */
-	for (int count = 0, n1 = 0, n2 = 1, r; count < N; count++) {
+	for (unsigned long count = 0, n1 = 0, n2 = 1; count < N; count++) {
 		int fib = n1 + n2;
 		int *pulled;
-
-		r = spsc_ub_pull(q, (void **) &pulled);
-		if (r) {
-			printf("Queue pull failed: %d\n", r);
-			return -1;
+		
+		while (spsc_ub_pull(q, (void **) &pulled)) {
+			//printf("Queue empty: %d\n", temp);
+			//return -1;
 		}
 		
 		if (*pulled != fib) {
@@ -94,8 +92,8 @@ int test_multi_threaded(struct spsc_ub_queue *q)
 	thrd_t thrp, thrc;
 	int resp, resc;
 	
-	thrd_create(&thrp, consumer, q);	/** @todo Why producer thread runs earlier? */
-	thrd_create(&thrc, producer, q);
+	thrd_create(&thrp, producer, q);	/** @todo Why producer thread runs earlier? */
+	thrd_create(&thrc, consumer, q);
 	
 	thrd_join(thrp, &resp);
 	thrd_join(thrc, &resc);
@@ -111,7 +109,7 @@ int test_multi_threaded(struct spsc_ub_queue *q)
 int main()
 {
 	struct spsc_ub_queue q;
-	spsc_ub_queue_init(&q, 1, &memtype_hugepage);	/** @todo change size from 1 in case of bounded queue impl */
+	spsc_ub_queue_init(&q, 1, &memtype_heap);	/** @todo change size>1 in case of bounded queue impl. memtype_hugepage impl for un_spsc */
 	
 	test_single_threaded(&q);
 	test_multi_threaded(&q);
