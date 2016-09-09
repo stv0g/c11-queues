@@ -1,9 +1,13 @@
 /** 
  *
  */
-
+#ifdef __linux__
+	#define _GNU_SOURCE
+#endif
+ 
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <stdio.h>		//DELETEME
 
 /* Required to allocate hugepages on Apple OS X */
 #ifdef __MACH__

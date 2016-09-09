@@ -38,8 +38,9 @@
 
 #include "memory.h"
 
-static size_t const cacheline_size = 64;
-typedef char cacheline_pad_t[cacheline_size];
+//static size_t const cacheline_size = 64;
+#define CACHELINE_SIZE 64
+typedef char cacheline_pad_t[CACHELINE_SIZE];
 
 struct node {
 	struct node * _Atomic _next;		/**> Single linked list of nodes */

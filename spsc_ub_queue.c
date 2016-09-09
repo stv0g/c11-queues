@@ -35,9 +35,8 @@
 
 void spsc_ub_queue_init(struct spsc_ub_queue* q, size_t size, const struct memtype *mem)
 {
-	struct node* n = memory_alloc(q->mem, sizeof(struct node) * size);
-
 	q->mem = mem;
+	struct node* n = memory_alloc(q->mem, sizeof(struct node) * size);
 	n->_next = NULL;
 	q->_tail = q->_head = q->_first= q->_tailcopy = n;
 	

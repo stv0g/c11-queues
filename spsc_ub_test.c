@@ -1,3 +1,7 @@
+#ifdef __linux__
+	#define _GNU_SOURCE
+#endif
+	
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
