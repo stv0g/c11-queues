@@ -79,7 +79,7 @@ struct node* spsc_ub_alloc_node(struct spsc_ub_queue* q)
 	return (struct node*) memory_alloc(q->mem, sizeof(struct node));
 }
 
-int spsc_ub_push(struct spsc_ub_queue* q, void * v)
+int spsc_ub_queue_push(struct spsc_ub_queue* q, void * v)
 {
 	struct node* n = spsc_ub_alloc_node(q);
 	
@@ -94,7 +94,7 @@ int spsc_ub_push(struct spsc_ub_queue* q, void * v)
 	return 0;
 }
 
-int spsc_ub_pull(struct spsc_ub_queue* q, void** v)
+int spsc_ub_queue_pull(struct spsc_ub_queue* q, void** v)
 {
 	if (atomic_load_explicit(&(q->_tail->_next), memory_order_consume)) {
 		*v = q->_tail->_next->_value;

@@ -39,8 +39,9 @@
 
 #include "memory.h"
 
-static size_t const cacheline_size = 64;
-typedef char cacheline_pad_t[cacheline_size];
+#define CACHELINE_SIZE 64
+
+typedef char cacheline_pad_t[CACHELINE_SIZE];
 
 struct mpmc_queue {
 	cacheline_pad_t _pad0;	/**< Shared area: all threads read */

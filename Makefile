@@ -1,5 +1,5 @@
-#TARGETS = spsc_ub_test mpmc_test spsc_test
-TARGETS = spsc_ub_test
+#TARGETS = spsc_ub_test_fib spsc_ub_test_default mpmc_test spsc_test
+TARGETS = spsc_ub_test_fib spsc_ub_test_default mpmc_test
 CFLAGS = -Wall -std=c11
 ifeq ($(shell uname), Linux)
 	LIBS = -pthread
@@ -17,11 +17,14 @@ endif
 
 all: $(TARGETS)
 
-spsc_ub_test: spsc_ub_test.o spsc_ub_queue.o memory.o
+spsc_ub_test_fib: spsc_ub_test_fib.o spsc_ub_queue.o memory.o
 	$(CC) $^ -Wall $(LIBS) -o $@
 
-#mpmc_test: mpmc_test.o mpmc_queue.o memory.o
-#	$(CC) $^ -Wall $(LIBS) -o $@
+spsc_ub_test_default: spsc_ub_test_default.o spsc_ub_queue.o memory.o
+	$(CC) $^ -Wall $(LIBS) -o $@
+
+mpmc_test: mpmc_test.o mpmc_queue.o memory.o
+	$(CC) $^ -Wall $(LIBS) -o $@
 
 #spsc_test: spsc_test.o spsc_queue.o memory.o
 #	$(CC) $^ -Wall $(LIBS) -o $@

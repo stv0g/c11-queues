@@ -1,3 +1,7 @@
+#ifdef __linux__
+	#define _GNU_SOURCE
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -32,9 +36,10 @@ uint64_t thread_get_id()
 	uint64_t id;
 	pthread_threadid_np(pthread_self(), &id);
 	return id;
-#elif defined(__linux__)
-	return (int) gettid();
+#elif defined(SYS_gettid)
+	return (int) syscall(SYS_gettid);
 #endif
+	return -1;
 }
 
 /** Get CPU timestep counter */
@@ -111,7 +116,7 @@ int main()
 
 	uint64_t end = rdtscp();
 	
-	printf("cycles/op = %llu\n", (end - start) / (batch_size * iter_count * 2 * thread_count));
+	printf("cycles/op = %lu\n", (end - start) / (batch_size * iter_count * 2 * thread_count));
 	
 	size_t used = mpmc_queue_available(&queue);
 	if (used > 0)
