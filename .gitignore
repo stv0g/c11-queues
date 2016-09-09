@@ -3,6 +3,7 @@
 *.so
 *~
 
-spsc_ub_test
+spsc_ub_test_fib
+spsc_ub_test_default
 spsc_test
 mpmc_test
