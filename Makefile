@@ -1,6 +1,9 @@
 #TARGETS = spsc_ub_test mpmc_test spsc_test
 TARGETS = spsc_ub_test
 CFLAGS = -Wall -std=c11
+ifeq ($(shell uname), Linux)
+	LIBS = -pthread
+endif
 
 DEBUG ?= 1
 

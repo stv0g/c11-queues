@@ -33,17 +33,17 @@
 
 #include "spsc_ub_queue.h"
 
-void spsc_ub_queue_init(struct spsc_ub_queue* q, size_t size, const struct memtype *mem)
+int spsc_ub_queue_init(struct spsc_ub_queue* q, size_t size, const struct memtype *mem)
 {
 	q->mem = mem;
 	struct node* n = memory_alloc(q->mem, sizeof(struct node) * size);
 	n->_next = NULL;
 	q->_tail = q->_head = q->_first= q->_tailcopy = n;
 	
-	return;
+	return 0;
 }
 
-void spsc_ub_queue_destroy(struct spsc_ub_queue* q)
+int spsc_ub_queue_destroy(struct spsc_ub_queue* q)
 {
 	struct node* n = q->_first;
 
@@ -52,6 +52,8 @@ void spsc_ub_queue_destroy(struct spsc_ub_queue* q)
 		memory_free(q->mem, (void *) n, sizeof(struct node));
 		n = next;
 	} while (n);
+	
+	return 0;
 }
 
 struct node* spsc_ub_alloc_node(struct spsc_ub_queue* q)
@@ -77,7 +79,7 @@ struct node* spsc_ub_alloc_node(struct spsc_ub_queue* q)
 	return (struct node*) memory_alloc(q->mem, sizeof(struct node));
 }
 
-void spsc_ub_enqueue(struct spsc_ub_queue* q, void * v)
+int spsc_ub_push(struct spsc_ub_queue* q, void * v)
 {
 	struct node* n = spsc_ub_alloc_node(q);
 	
@@ -89,10 +91,10 @@ void spsc_ub_enqueue(struct spsc_ub_queue* q, void * v)
 	
 	q->_head = n;
 	
-	return;
+	return 0;
 }
 
-int spsc_ub_dequeue(struct spsc_ub_queue* q, void** v)
+int spsc_ub_pull(struct spsc_ub_queue* q, void** v)
 {
 	if (atomic_load_explicit(&(q->_tail->_next), memory_order_consume)) {
 		*v = q->_tail->_next->_value;

@@ -68,14 +68,21 @@ struct spsc_ub_queue
 	struct node* _Atomic _tailcopy;	/**> Helper which points somewhere between _first and _tail */
 };
 
-void spsc_ub_queue_init(struct spsc_ub_queue *q, size_t size, const struct memtype *mem);
+/** Initialize SPSC queue */
+int spsc_ub_queue_init(struct spsc_ub_queue *q, size_t size, const struct memtype *mem);
 
-void spsc_ub_queue_destroy(struct spsc_ub_queue *q);
+/** Destroy SPSC queue and release memory */
+int spsc_ub_queue_destroy(struct spsc_ub_queue *q);
 
+/** Allocate memory for new node. Each node stores a pointer 
+ * value pushed to unbounded SPSC queue 
+ */
 struct node * spsc_ub_alloc_node(struct spsc_ub_queue *q);
 
-void spsc_ub_enqueue(struct spsc_ub_queue *q, void *v);
+/** Push a value to unbounded SPSC queue */
+int spsc_ub_push(struct spsc_ub_queue *q, void *v);
 
-int spsc_ub_dequeue(struct spsc_ub_queue *q, void **v);
+/** Pull a value from unbounded SPSC queue */
+int spsc_ub_pull(struct spsc_ub_queue *q, void **v);
 
 #endif /* _SPSC_UB_QUEUE_H_ */
