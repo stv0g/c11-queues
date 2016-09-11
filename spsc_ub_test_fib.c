@@ -92,8 +92,8 @@ int test_multi_threaded(struct spsc_ub_queue *q)
 	thrd_t thrp, thrc;
 	int resp, resc;
 	
-	thrd_create(&thrp, producer, q);	/** @todo Why producer thread runs earlier? */
-	thrd_create(&thrc, consumer, q);
+	thrd_create(&thrp, consumer, q);	/** @todo Why producer thread runs earlier? */
+	thrd_create(&thrc, producer, q);
 	
 	thrd_join(thrp, &resp);
 	thrd_join(thrc, &resc);
@@ -109,7 +109,7 @@ int test_multi_threaded(struct spsc_ub_queue *q)
 int main()
 {
 	struct spsc_ub_queue q;
-	spsc_ub_queue_init(&q, 1, &memtype_heap);	/** @todo change size>1 in case of bounded queue impl. memtype_hugepage impl for un_spsc */
+	spsc_ub_queue_init(&q, N, &memtype_heap);	/** @todo change size>1 in case of bounded queue impl. memtype_hugepage impl for un_spsc */
 	
 	test_single_threaded(&q);
 	test_multi_threaded(&q);

@@ -40,6 +40,13 @@ int spsc_ub_queue_init(struct spsc_ub_queue* q, size_t size, const struct memtyp
 	n->_next = NULL;
 	q->_tail = q->_head = q->_first= q->_tailcopy = n;
 	
+	/** Alloc memory at start for total size for efficiency */
+	void *v = NULL;
+	for(unsigned long i = 0; i < size; i++)		/** @todo fix this hack in bounded implementation */
+		spsc_ub_queue_push(q, v);
+	for(unsigned long i = 0; i < size; i++)
+		spsc_ub_queue_pull(q, &v);
+	
 	return 0;
 }
 
