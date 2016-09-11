@@ -98,7 +98,7 @@ int spsc_ub_queue_push(struct spsc_ub_queue* q, void * v)
 	
 	q->_head = n;
 	
-	return 0;
+	return 1;
 }
 
 int spsc_ub_queue_pull(struct spsc_ub_queue* q, void** v)
@@ -109,8 +109,8 @@ int spsc_ub_queue_pull(struct spsc_ub_queue* q, void** v)
 		//store_release(&q->_tail, q->_tail->_next);
 		atomic_store_explicit(&q->_tail, q->_tail->_next, memory_order_release);
 		
-		return 0;
+		return 1;
 	}
 	
-	return -1;
+	return 0;
 }

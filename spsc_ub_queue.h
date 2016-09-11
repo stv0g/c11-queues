@@ -79,10 +79,14 @@ int spsc_ub_queue_destroy(struct spsc_ub_queue *q);
  */
 struct node * spsc_ub_alloc_node(struct spsc_ub_queue *q);
 
-/** Push a value to unbounded SPSC queue */
+/** Push a value from unbounded SPSC queue 
+ *  return : 1 always as its an unbounded queue
+ */
 int spsc_ub_queue_push(struct spsc_ub_queue *q, void *v);
 
-/** Pull a value from unbounded SPSC queue */
+/** Pull a value from unbounded SPSC queue 
+ *  return : 1 if success else 0
+ */
 int spsc_ub_queue_pull(struct spsc_ub_queue *q, void **v);
 
 #endif /* _SPSC_UB_QUEUE_H_ */
