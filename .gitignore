@@ -7,3 +7,4 @@ spsc_ub_test_fib
 spsc_ub_test_default
 spsc_test
 mpmc_test
+mpmc_test_fib
