@@ -49,19 +49,25 @@ struct spsc_queue {
 	size_t capacity;	/**< Total number of available pointers in queue::array */
 	
 	/* Consumer part */
-	atomic_int tail;	/**< Tail pointer of queue*/
+	_Atomic int _tail;	/**< Tail pointer of queue*/
 	cacheline_pad_t _pad1;
 	/* Producer part */
-	atomic_int head;	/**< Head pointer of queue*/
+	_Atomic int _head;	/**< Head pointer of queue*/
 	
 	void *pointers[];	/**< Circular buffer. */
 };
 
 /** Initiliaze a new queue and allocate memory. */
-void * spsc_queue_init(size_t size, const struct memtype *mem);
+struct spsc_queue * spsc_queue_init(struct spsc_queue *q, size_t size, const struct memtype *mem);
 
 /** Release memory of queue. */
-void spsc_queue_destroy(struct spsc_queue *q);
+int spsc_queue_destroy(struct spsc_queue *q);
+
+/** Return the number of free slots in a queue
+ *
+ * Note: This is only an estimate!
+ */
+int spsc_queue_available(struct spsc_queue *q);
 
 /** Enqueue up to \p cnt elements from \p ptrs[] at the queue tail pointed by \p tail.
  *
@@ -85,33 +91,29 @@ int spsc_queue_push_many(struct spsc_queue *q, void *ptrs[], size_t cnt);
  * @param[in,out] head A pointer to a queue head. The value will be updated to reflect the new head.
  * @return The number of elements which have been dequeued.
  */
-int spsc_queue_pull_many(struct spsc_queue *q, void *ptrs[], size_t cnt);
+int spsc_queue_pull_many(struct spsc_queue *q, void **ptrs[], size_t cnt);
 
 /** Fill \p ptrs with \p cnt elements of the queue starting at entry \p pos. */
-int spsc_queue_get_many(struct spsc_queue *q, void *ptrs[], size_t cnt);
-
-/** Get the first element in the queue */
-static inline int spsc_queue_get(struct spsc_queue *q, void **ptr)
-{
-	return spsc_queue_get_many(q, ptr, 1);
-}
+int spsc_queue_get_many(struct spsc_queue *q, void **ptrs[], size_t cnt);
 
 /** Enqueue a new block at the tail of the queue. */
-static inline int spsc_queue_push(struct spsc_queue *q, void **ptr)
+static inline int spsc_queue_push(struct spsc_queue *q, void *ptr)
 {
-	return spsc_queue_push_many(q, ptr, 1);
+	return spsc_queue_push_many(q, &ptr, 1);
 }
 
 /** Dequeue the first block at the head of the queue. */
 static inline int spsc_queue_pull(struct spsc_queue *q, void **ptr)
 {
-	return spsc_queue_pull_many(q, ptr, 1);
+	return spsc_queue_pull_many(q, &ptr, 1);
 }
 
-/** Return the number of free slots in a queue
- *
- * Note: This is only an estimate!
- */
-int spsc_queue_available(struct spsc_queue *q);
+/** Get the first element in the queue */
+static inline int spsc_queue_get(struct spsc_queue *q, void **ptr)
+{
+	return spsc_queue_get_many(q, &ptr, 1);
+}
+
+//int spsc_debug(struct spsc_queue *q);
 
 #endif /* _SPSC_QUEUE_H_ */

@@ -1,5 +1,4 @@
-#TARGETS = spsc_ub_test_fib spsc_ub_test_default mpmc_test spsc_test
-TARGETS = spsc_ub_test_fib spsc_ub_test_default mpmc_test mpmc_test_fib
+TARGETS = spsc_ub_test_fib spsc_ub_test_default mpmc_test mpmc_test_fib spsc_test_fib
 CFLAGS = -Wall -std=c11
 ifeq ($(shell uname), Linux)
 	LIBS = -pthread
@@ -29,8 +28,8 @@ mpmc_test: mpmc_test.o mpmc_queue.o memory.o
 mpmc_test_fib: mpmc_test_fib.o mpmc_queue.o memory.o
 	$(CC) $^ -Wall $(LIBS) -o $@
 
-#spsc_test: spsc_test.o spsc_queue.o memory.o
-#	$(CC) $^ -Wall $(LIBS) -o $@
+spsc_test_fib: spsc_test_fib.o spsc_queue.o memory.o
+	$(CC) $^ -Wall $(LIBS) -o $@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
