@@ -52,7 +52,7 @@ struct spsc_queue * spsc_queue_init(struct spsc_queue * q, size_t size, const st
 
 int spsc_queue_destroy(struct spsc_queue *q)
 {
-	const struct memtype mem = *(q->mem);	/** @todo Memory is not being freed properly */
+	const struct memtype mem = *(q->mem);	/** @todo Memory is not being freed properly??? */
 	return memory_free(&mem, q, sizeof(struct spsc_queue) + ((q->capacity + 1) * sizeof(q->pointers[0])));
 }
 
@@ -63,6 +63,7 @@ int spsc_queue_get_many(struct spsc_queue *q, void **ptrs[], size_t cnt)
 	if (cnt > filled_slots)
 		cnt = filled_slots;
 	
+	/**@todo Is atomic_load_explicit needed here for loading q->_head? */
 	for (int i = 0; i < cnt; i++)
 		ptrs[i] = &(q->pointers[q->_head % (q->capacity + 1)]);
 	
@@ -78,8 +79,8 @@ int spsc_queue_push_many(struct spsc_queue *q, void *ptrs[], size_t cnt)
 		cnt = free_slots;
 	
 	for (int i = 0; i < cnt; i++) {
-		q->pointers[q->_tail] = ptrs[i];	//--? or (q->_tail + i)%(q->capacity + 1) as index and update q->_tail at end of loop
-		q->_tail = (q->_tail + 1)%(q->capacity + 1);
+		q->pointers[q->_tail] = ptrs[i];
+		atomic_store_explicit(&q->_tail, (q->_tail + 1)%(q->capacity + 1), memory_order_release);
 	}
 	
 	return cnt;
@@ -94,28 +95,16 @@ int spsc_queue_pull_many(struct spsc_queue *q, void **ptrs[], size_t cnt)
 	
 	for (int i = 0; i < cnt; i++) {
 		*ptrs[i] = q->pointers[q->_head];
-		q->_head = (q->_head + 1)%(q->capacity + 1);
+		atomic_store_explicit(&q->_head, (q->_head + 1)%(q->capacity + 1), memory_order_release);
 	}
 	
 	return cnt;
 }
 
-int spsc_queue_available(struct spsc_queue *q)	//--? make this func inline
+int spsc_queue_available(struct spsc_queue *q)
 {
-	if (q->_tail < q->_head)
+	if (atomic_load_explicit(&q->_tail, memory_order_consume) < atomic_load_explicit(&q->_head, memory_order_consume))
 		return q->_head - q->_tail - 1;
 	else
 		return q->_head + (q->capacity - q->_tail);
 }
-/**
-int spsc_debug(struct spsc_queue *q)
-{
-	printf("q->_tail %d, q->_head %d, q->capacity %lu\n", q->_tail, q->_head, q->capacity);
-	int temp_count = q->_head;
-	for (int i = 0; i < q->capacity - spsc_queue_available(q); i++) {
-		printf("Value of stored pointer %d: %p\n", i, q->pointers[q->_head]);
-		temp_count = (temp_count + 1)%(q->capacity + 1);
-	}
-	
-	return 0;
-} */

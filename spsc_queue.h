@@ -114,6 +114,4 @@ static inline int spsc_queue_get(struct spsc_queue *q, void **ptr)
 	return spsc_queue_get_many(q, &ptr, 1);
 }
 
-//int spsc_debug(struct spsc_queue *q);
-
 #endif /* _SPSC_QUEUE_H_ */

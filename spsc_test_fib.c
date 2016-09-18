@@ -58,7 +58,7 @@ int fibs[N];
 
 int producer(void *ctx)
 {
-	printf("producer\n"); //DELETEME
+	printf("producer\n");
 	struct spsc_queue *q = (struct spsc_queue *) ctx;
 	
 	srand((unsigned) time(0) + thread_get_id());
@@ -79,7 +79,7 @@ int producer(void *ctx)
 		void *fibptr = (void *) &fibs[count];
 		
 		if (!spsc_queue_push(q, fibptr)) {
-			printf("Queue push failed\n");
+			printf("Queue push failed at count %lu\n", count);
 			return -1;
 		}
 			
@@ -91,7 +91,7 @@ int producer(void *ctx)
 
 int consumer(void *ctx)
 {
-	printf("consumer\n"); 	//DELETEME
+	printf("consumer\n");
 	struct spsc_queue *q = (struct spsc_queue *) ctx;
 	
 	srand((unsigned) time(0) + thread_get_id());
@@ -134,14 +134,14 @@ int test_single_threaded(struct spsc_queue *q)
 	
 	resp = producer(q);
 	if (resp)
-		printf("Enqueuing failed");
+		printf("Enqueuing failed\n");
 	
 	resc = consumer(q);
 	if (resc)
-		printf("Consumer failed");
+		printf("Consumer failed\n");
 	
 	if (resc || resp)
-		printf("Single Thread Test Failed");
+		printf("Single Thread Test Failed\n");
 	else
 		printf("Single Thread Test Complete\n");
 	
@@ -150,6 +150,8 @@ int test_single_threaded(struct spsc_queue *q)
 
 int test_multi_threaded(struct spsc_queue *q)
 {
+	g_start = 0;
+	
 	thrd_t thrp, thrc;
 	int resp, resc;
 	
@@ -167,7 +169,7 @@ int test_multi_threaded(struct spsc_queue *q)
 	uint64_t end = rdtscp();
 	
 	if (resc || resp)
-		printf("Queue Test failed");
+		printf("Queue Test failed\n");
 	else
 		printf("Two-thread Test Complete\n");
 	
@@ -182,14 +184,14 @@ int test_multi_threaded(struct spsc_queue *q)
 int main()
 {
 	struct spsc_queue * q = NULL;
-	q = spsc_queue_init(q, 1<<20, &memtype_hugepage);	/** @todo change size>1 in case of bounded queue impl. memtype_hugepage impl for un_spsc */
+	q = spsc_queue_init(q, 1<<20, &memtype_hugepage);
 	
-	//test_single_threaded(q);
+	//test_single_threaded(q); /** Single threaded test fails with N > queue size*/
 	test_multi_threaded(q);
 	
 	int ret = spsc_queue_destroy(q);
 	if (ret)
-		printf("Failed to destroy queue: %d", ret);
+		printf("Failed to destroy queue: %d\n", ret);
 	
 	return 0;
 }
