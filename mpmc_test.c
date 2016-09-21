@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <time.h>
 
 /* There are not many compilers yet which support threads.h natively.
  * We will fallback to a drop-in replacement which is based on pthreads.h */
@@ -23,7 +24,7 @@
 
 size_t const thread_count = 4;
 size_t const batch_size = 10;
-size_t const iter_count = 20000000;
+size_t const iter_count = 2000000;
 size_t const queue_size = 1 << 20;
 
 int volatile g_start = 0;
@@ -54,6 +55,7 @@ __attribute__((always_inline)) static inline uint64_t rdtscp()
 		:
 		: "%rcx", "%rdx", "memory");
 
+	printf("tsc %lu\n", tsc);
 	return tsc;
 }
 
@@ -101,22 +103,30 @@ int main()
 	thrd_t threads[thread_count];
 	int ret;
 	
-	mpmc_queue_init(&queue, queue_size, &memtype_hugepage);
+	mpmc_queue_init(&queue, queue_size, &memtype_heap);
 
 	for (int i = 0; i != thread_count; ++i)
 		thrd_create(&threads[i], thread_func, &queue);
 
 	sleep(1);
+	
+	long long starttime, endtime;
+	struct timespec start, end;
 
-	uint64_t start = rdtscp();
+	if(clock_gettime(CLOCK_REALTIME, &start))
+		return -1;
+
 	g_start = 1;
 
 	for (int i = 0; i != thread_count; ++i)
 		thrd_join(threads[i], NULL);
 
-	uint64_t end = rdtscp();
+	if(clock_gettime(CLOCK_REALTIME, &end))
+		return -1;
 	
-	printf("cycles/op = %lu\n", (end - start) / (batch_size * iter_count * 2 * thread_count));
+	starttime = start.tv_sec*1000000000LL + start.tv_nsec;
+	endtime = end.tv_sec*1000000000LL + end.tv_nsec;
+	printf("cycles/op = %lld\n", (endtime - starttime) / (batch_size * iter_count * 2 * thread_count));
 	
 	size_t used = mpmc_queue_available(&queue);
 	if (used > 0)

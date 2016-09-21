@@ -156,20 +156,29 @@ int test_multi_threaded(struct mpmc_queue *q)
 	
 	sleep(1);
 
-	uint64_t start = rdtscp();
+	long long starttime, endtime;
+	struct timespec start, end;
+	
+	if(clock_gettime(CLOCK_REALTIME, &start))
+		return -1;
+
 	g_start = 1;
 
 	thrd_join(thrp, &resp);
 	thrd_join(thrc, &resc);
 	
-	uint64_t end = rdtscp();
-	
+	if(clock_gettime(CLOCK_REALTIME, &end))
+		return -1;
+
+	starttime = start.tv_sec*1000000000LL + start.tv_nsec;
+	endtime = end.tv_sec*1000000000LL + end.tv_nsec;
+
 	if (resc || resp)
 		printf("Queue Test failed");
 	else
 		printf("Two-thread Test Complete\n");
 	
-	printf("cycles/op = %lu\n", (end - start) / N );
+	printf("cycles/op = %lld\n", (endtime - starttime) / N );
 	
 	size_t used = mpmc_queue_available(q);
 	if (used > 0)

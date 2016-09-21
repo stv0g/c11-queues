@@ -160,20 +160,27 @@ int test_multi_threaded(struct spsc_queue *q)
 	
 	sleep(1);
 
-	uint64_t start = rdtscp();
+	long long starttime, endtime;
+	struct timespec start, end;
+	if(clock_gettime(CLOCK_REALTIME, &start))
+		return -1;
+
 	g_start = 1;
 
 	thrd_join(thrp, &resp);
 	thrd_join(thrc, &resc);
 	
-	uint64_t end = rdtscp();
-	
+	if(clock_gettime(CLOCK_REALTIME, &end))
+		return -1;
+
 	if (resc || resp)
 		printf("Queue Test failed\n");
 	else
 		printf("Two-thread Test Complete\n");
 	
-	printf("cycles/op = %lu\n", (end - start) / N );
+	starttime = start.tv_sec*1000000000LL + start.tv_nsec;
+	endtime = end.tv_sec*1000000000LL + end.tv_nsec;
+	printf("cycles/op = %lld\n", (endtime - starttime) / N );
 	
 	if (spsc_queue_available(q) != q->capacity)
 		printf("slots in use? There is something wrong with the test %d\n", spsc_queue_available(q));
@@ -184,7 +191,7 @@ int test_multi_threaded(struct spsc_queue *q)
 int main()
 {
 	struct spsc_queue * q = NULL;
-	q = spsc_queue_init(q, 1<<20, &memtype_hugepage);
+	q = spsc_queue_init(q, 1<<20, &memtype_heap);
 	
 	//test_single_threaded(q); /** Single threaded test fails with N > queue size*/
 	test_multi_threaded(q);
