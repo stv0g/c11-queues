@@ -36,8 +36,8 @@ uint64_t thread_get_id()
 __attribute__((always_inline)) static inline uint64_t rdtscp()
 {
 	uint64_t tsc;
-
-	__asm__ ("rdtscp;"
+	/** @todo not recommended to use rdtsc on multicore machine */
+	__asm__ ("rdtsc;"
 		 "shl $32, %%rdx;"
 		 "or %%rdx,%%rax"
 		: "=a" (tsc)
@@ -58,7 +58,7 @@ int fibs[N];
 
 int producer(void *ctx)
 {
-	printf("producer\n"); //DELETEME
+	//printf("producer\n"); //DELETEME
 	struct mpmc_queue *q = (struct mpmc_queue *) ctx;
 	
 	srand((unsigned) time(0) + thread_get_id());
@@ -79,7 +79,7 @@ int producer(void *ctx)
 		void *fibptr = (void *) &fibs[count];
 		
 		if (!mpmc_queue_push(q, fibptr)) {
-			printf("Queue push failed\n");
+			printf("Queue push failed at count %lu\n", count);
 			return -1;
 		}
 		
@@ -91,7 +91,7 @@ int producer(void *ctx)
 
 int consumer(void *ctx)
 {
-	printf("consumer\n"); 	//DELETEME
+	//printf("consumer\n"); 	//DELETEME
 	struct mpmc_queue *q = (struct mpmc_queue *) ctx;
 	
 	srand((unsigned) time(0) + thread_get_id());
@@ -129,17 +129,18 @@ int consumer(void *ctx)
 int test_single_threaded(struct mpmc_queue *q)
 {
 	int resp, resc;
+	g_start = 1;
 	
 	resp = producer(q);
 	if (resp)
-		printf("Enqueuing failed");
+		printf("Enqueuing failed\n");
 	
 	resc = consumer(q);
 	if (resc)
-		printf("Consumer failed");
+		printf("Consumer failed\n");
 	
 	if (resc || resp)
-		printf("Single Thread Test Failed");
+		printf("Single Thread Test Failed\n");
 	else
 		printf("Single Thread Test Complete\n");
 	
@@ -151,42 +152,37 @@ int test_multi_threaded(struct mpmc_queue *q)
 	thrd_t thrp, thrc;
 	int resp, resc;
 	
+	g_start = 0;
+	
 	thrd_create(&thrp, consumer, q);	/** @todo Why producer thread runs earlier? */
 	thrd_create(&thrc, producer, q);
 	
 	sleep(1);
 
-	long long starttime, endtime;
-	struct timespec start, end;
-	
-	if(clock_gettime(CLOCK_REALTIME, &start))
-		return -1;
+	uint64_t start_tsc_time, end_tsc_time;
 
+	start_tsc_time = rdtscp();
 	g_start = 1;
 
 	thrd_join(thrp, &resp);
 	thrd_join(thrc, &resc);
 	
-	if(clock_gettime(CLOCK_REALTIME, &end))
-		return -1;
-
-	starttime = start.tv_sec*1000000000LL + start.tv_nsec;
-	endtime = end.tv_sec*1000000000LL + end.tv_nsec;
+	end_tsc_time = rdtscp();
 
 	if (resc || resp)
-		printf("Queue Test failed");
+		printf("Queue Test failed\n");
 	else
 		printf("Two-thread Test Complete\n");
 	
-	printf("cycles/op = %lld\n", (endtime - starttime) / N );
-	
+	printf("cycles/op for rdtsc %lu\n", (end_tsc_time - start_tsc_time)/N);
+
 	size_t used = mpmc_queue_available(q);
 	if (used > 0)
 		printf("%zu slots in use? There is something wrong with the test\n", used);
 	
 	int ret = mpmc_queue_destroy(q);
 	if (ret)
-		printf("Failed to destroy queue: %d", ret);
+		printf("Failed to destroy queue: %d\n", ret);
 	
 	return 0;
 }
@@ -195,7 +191,7 @@ int main()
 {
 	struct mpmc_queue q;
 	mpmc_queue_init(&q, 1<<20, &memtype_heap);	/** @todo change size>1 in case of bounded queue impl. memtype_hugepage impl for un_spsc */
-
+	
 	test_multi_threaded(&q);
 	
 	return 0;

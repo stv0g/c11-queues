@@ -36,8 +36,8 @@ uint64_t thread_get_id()
 __attribute__((always_inline)) static inline uint64_t rdtscp()
 {
 	uint64_t tsc;
-
-	__asm__ ("rdtscp;"
+	/** @todo not recommended to use rdtsc on multicore machine */
+	__asm__ ("rdtsc;"
 		 "shl $32, %%rdx;"
 		 "or %%rdx,%%rax"
 		: "=a" (tsc)
@@ -58,7 +58,7 @@ int fibs[N];
 
 int producer(void *ctx)
 {
-	printf("producer\n");
+	//printf("producer\n"); //DELETEME
 	struct spsc_queue *q = (struct spsc_queue *) ctx;
 	
 	srand((unsigned) time(0) + thread_get_id());
@@ -79,10 +79,10 @@ int producer(void *ctx)
 		void *fibptr = (void *) &fibs[count];
 		
 		if (!spsc_queue_push(q, fibptr)) {
-			printf("Queue push failed at count %lu\n", count);
+			printf("Queue push failed at count %lu, %d\n", count, 1<<20);
 			return -1;
 		}
-			
+		
 		n1 = n2; n2 = fibs[count];
 	}
 	
@@ -91,7 +91,7 @@ int producer(void *ctx)
 
 int consumer(void *ctx)
 {
-	printf("consumer\n");
+	//printf("consumer\n"); 	//DELETEME
 	struct spsc_queue *q = (struct spsc_queue *) ctx;
 	
 	srand((unsigned) time(0) + thread_get_id());
@@ -101,7 +101,7 @@ int consumer(void *ctx)
 	while (g_start == 0)
 		thrd_yield();
 	
-		/* Wait for a random time */
+	/* Wait for a random time */
 	for (size_t i = 0; i != pause; i += 1)
 		nop();
 	
@@ -118,7 +118,7 @@ int consumer(void *ctx)
 		if (*pulled != fib) {
 			printf("Pulled != fib\n");
 			return -1;
-		}
+		}		
 		
 		n1 = n2; n2 = fib;
 	}
@@ -129,9 +129,7 @@ int consumer(void *ctx)
 int test_single_threaded(struct spsc_queue *q)
 {
 	int resp, resc;
-	
 	g_start = 1;
-	
 	resp = producer(q);
 	if (resp)
 		printf("Enqueuing failed\n");
@@ -150,55 +148,51 @@ int test_single_threaded(struct spsc_queue *q)
 
 int test_multi_threaded(struct spsc_queue *q)
 {
-	g_start = 0;
-	
 	thrd_t thrp, thrc;
 	int resp, resc;
+	
+	g_start = 0;
 	
 	thrd_create(&thrp, consumer, q);	/** @todo Why producer thread runs earlier? */
 	thrd_create(&thrc, producer, q);
 	
 	sleep(1);
 
-	long long starttime, endtime;
-	struct timespec start, end;
-	if(clock_gettime(CLOCK_REALTIME, &start))
-		return -1;
+	uint64_t start_tsc_time, end_tsc_time;
 
+	start_tsc_time = rdtscp();
 	g_start = 1;
 
 	thrd_join(thrp, &resp);
 	thrd_join(thrc, &resc);
 	
-	if(clock_gettime(CLOCK_REALTIME, &end))
-		return -1;
+	end_tsc_time = rdtscp();
 
 	if (resc || resp)
 		printf("Queue Test failed\n");
 	else
 		printf("Two-thread Test Complete\n");
-	
-	starttime = start.tv_sec*1000000000LL + start.tv_nsec;
-	endtime = end.tv_sec*1000000000LL + end.tv_nsec;
-	printf("cycles/op = %lld\n", (endtime - starttime) / N );
-	
+
+	printf("cycles/op for rdtsc %lu\n", (end_tsc_time - start_tsc_time)/N);
+
+	size_t used = spsc_queue_available(q);
 	if (spsc_queue_available(q) != q->capacity)
-		printf("slots in use? There is something wrong with the test %d\n", spsc_queue_available(q));
+		printf("%zu slots in use? There is something wrong with the test\n", used);
+	
+	int ret = spsc_queue_destroy(q);
+	if (ret)
+		printf("Failed to destroy queue: %d\n", ret);
 	
 	return 0;
 }
 
 int main()
 {
-	struct spsc_queue * q = NULL;
+	struct spsc_queue* q = NULL;
 	q = spsc_queue_init(q, 1<<20, &memtype_heap);
 	
-	//test_single_threaded(q); /** Single threaded test fails with N > queue size*/
 	test_multi_threaded(q);
-	
-	int ret = spsc_queue_destroy(q);
-	if (ret)
-		printf("Failed to destroy queue: %d\n", ret);
+	//test_single_threaded(q); /** Single threaded test fails with N > queue size*/
 	
 	return 0;
 }
