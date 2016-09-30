@@ -90,7 +90,8 @@ int spsc_ub_queue_push(struct spsc_ub_queue* q, void * v)
 {
 	struct node* n = spsc_ub_alloc_node(q);
 	
-	n->_next = NULL;
+	atomic_store_explicit(&(n->_next), NULL, memory_order_release);
+	//n->_next = NULL;
 	n->_value = v;
 	
 	//store_release(&(q->_head->_next), n);

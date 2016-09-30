@@ -63,9 +63,12 @@ struct spsc_ub_queue
 
 	/* Producer part 
 	 * accessed only by producer */
-	struct node* _Atomic _head;		/**> Head of the queue. */
-	struct node* _Atomic _first;		/**> Last unused node (tail of node cache). */
-	struct node* _Atomic _tailcopy;	/**> Helper which points somewhere between _first and _tail */
+	struct node* _head;		/**> Head of the queue. */
+	cacheline_pad_t _pad2;
+	struct node* _first;		/**> Last unused node (tail of node cache). */
+	cacheline_pad_t _pad3;
+	struct node* _tailcopy;	/**> Helper which points somewhere between _first and _tail */
+	cacheline_pad_t _pad4;
 };
 
 /** Initialize SPSC queue */
