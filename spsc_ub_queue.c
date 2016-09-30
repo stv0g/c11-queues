@@ -75,7 +75,7 @@ struct node* spsc_ub_alloc_node(struct spsc_ub_queue* q)
 	}
 
 	//q->_tailcopy = load_consume(q->_tail);
-	q->_tailcopy = atomic_load_explicit(&q->_tail, memory_order_consume);
+	q->_tailcopy = atomic_load_explicit(&q->_tail, memory_order_acquire);
 	
 	if (q->_first != q->_tailcopy) {
 		struct node* n = q->_first;
@@ -104,7 +104,7 @@ int spsc_ub_queue_push(struct spsc_ub_queue* q, void * v)
 
 int spsc_ub_queue_pull(struct spsc_ub_queue* q, void** v)
 {
-	if (atomic_load_explicit(&(q->_tail->_next), memory_order_consume)) {
+	if (atomic_load_explicit(&(q->_tail->_next), memory_order_acquire)) {
 		*v = q->_tail->_next->_value;
 		
 		//store_release(&q->_tail, q->_tail->_next);

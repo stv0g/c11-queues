@@ -103,7 +103,7 @@ int spsc_queue_pull_many(struct spsc_queue *q, void **ptrs[], size_t cnt)
 
 int spsc_queue_available(struct spsc_queue *q)
 {
-	if (atomic_load_explicit(&q->_tail, memory_order_consume) < atomic_load_explicit(&q->_head, memory_order_consume))
+	if (atomic_load_explicit(&q->_tail, memory_order_acquire) < atomic_load_explicit(&q->_head, memory_order_acquire))
 		return q->_head - q->_tail - 1;
 	else
 		return q->_head + (q->capacity - q->_tail);

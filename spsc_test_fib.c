@@ -58,7 +58,7 @@ int fibs[N];
 
 int producer(void *ctx)
 {
-	//printf("producer\n"); //DELETEME
+	printf("producer\n"); //DELETEME
 	struct spsc_queue *q = (struct spsc_queue *) ctx;
 	
 	srand((unsigned) time(0) + thread_get_id());
@@ -79,7 +79,7 @@ int producer(void *ctx)
 		void *fibptr = (void *) &fibs[count];
 		
 		if (!spsc_queue_push(q, fibptr)) {
-			printf("Queue push failed at count %lu, %d\n", count, 1<<20);
+			printf("Queue push failed at count %lu, %d, free slots %d\n", count, 1<<20, spsc_queue_available(q));
 			return -1;
 		}
 		
@@ -91,7 +91,7 @@ int producer(void *ctx)
 
 int consumer(void *ctx)
 {
-	//printf("consumer\n"); 	//DELETEME
+	printf("consumer\n"); 	//DELETEME
 	struct spsc_queue *q = (struct spsc_queue *) ctx;
 	
 	srand((unsigned) time(0) + thread_get_id());
@@ -189,7 +189,7 @@ int test_multi_threaded(struct spsc_queue *q)
 int main()
 {
 	struct spsc_queue* q = NULL;
-	q = spsc_queue_init(q, 1<<20, &memtype_heap);
+	q = spsc_queue_init(q, 1<<24, &memtype_heap);
 	
 	test_multi_threaded(q);
 	//test_single_threaded(q); /** Single threaded test fails with N > queue size*/
