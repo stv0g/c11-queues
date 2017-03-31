@@ -59,10 +59,10 @@ void spsc_queue_destroy(struct spsc_queue *q)
 
 int spsc_queue_get_many(struct spsc_queue *q, void *ptrs[], size_t cnt)
 {
-	int filled_slots = q->capacity - spsc_queue_available(q);
-	
-	if (cnt > filled_slots)
-		cnt = filled_slots;
+	if (q->capacity <= spsc_queue_available(q))
+		cnt = 0;
+	else if (cnt > q->capacity - spsc_queue_available(q))
+		cnt = q->capacity - spsc_queue_available(q);
 	
 	for (int i = 0; i < cnt; i++)
 		ptrs[i] = q->pointers[q->head % (q->capacity + 1)];
@@ -73,12 +73,12 @@ int spsc_queue_get_many(struct spsc_queue *q, void *ptrs[], size_t cnt)
 int spsc_queue_push_many(struct spsc_queue *q, void **ptrs, size_t cnt)
 {
 	//int free_slots = q->tail < q->head ? q->head - q->tail - 1 : q->head + (q->capacity - q->tail);
-	int free_slots = spsc_queue_available(q);
+	size_t free_slots = spsc_queue_available(q);
 	
 	if (cnt > free_slots)
 		cnt = free_slots;
 	
-	for (int i = 0; i < cnt; i++) {
+	for (size_t i = 0; i < cnt; i++) {
 		q->pointers[q->tail] = ptrs[i]; 			//--? alternate use (q->tail + i)%(q->capacity + 1) as index and update q->tail at the end of loop
 		q->tail = (q->tail + 1)%(q->capacity + 1);
 	}
@@ -88,12 +88,12 @@ int spsc_queue_push_many(struct spsc_queue *q, void **ptrs, size_t cnt)
 
 int spsc_queue_pull_many(struct spsc_queue *q, void **ptrs, size_t cnt)
 {
-	int filled_slots = q->capacity - spsc_queue_available(q);
+	if (q->capacity <= spsc_queue_available(q))
+		cnt = 0;
+	else if (cnt > q->capacity - spsc_queue_available(q))
+		cnt = q->capacity - spsc_queue_available(q);
 	
-	if (cnt > filled_slots)
-		cnt = filled_slots;
-	
-	for (int i = 0; i < cnt; i++) {
+	for (size_t i = 0; i < cnt; i++) {
 		ptrs[i] = q->pointers[q->head];
 		q->head = (q->head + 1)%(q->capacity + 1);
 	}
