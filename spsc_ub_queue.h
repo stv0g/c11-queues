@@ -38,8 +38,9 @@
 
 #include "memory.h"
 
-static size_t const cacheline_size = 64;
-typedef char cacheline_pad_t[cacheline_size];
+//static size_t const cacheline_size = 64;
+#define CACHELINE_SIZE 64
+typedef char cacheline_pad_t[CACHELINE_SIZE];
 
 struct node {
 	struct node * _Atomic _next;		/**> Single linked list of nodes */
@@ -62,19 +63,33 @@ struct spsc_ub_queue
 
 	/* Producer part 
 	 * accessed only by producer */
-	struct node* _Atomic _head;		/**> Head of the queue. */
-	struct node* _Atomic _first;		/**> Last unused node (tail of node cache). */
-	struct node* _Atomic _tailcopy;	/**> Helper which points somewhere between _first and _tail */
+	struct node* _head;		/**> Head of the queue. */
+	cacheline_pad_t _pad2;
+	struct node* _first;		/**> Last unused node (tail of node cache). */
+	cacheline_pad_t _pad3;
+	struct node* _tailcopy;	/**> Helper which points somewhere between _first and _tail */
+	cacheline_pad_t _pad4;
 };
 
-void spsc_ub_queue_init(struct spsc_ub_queue *q, size_t size, const struct memtype *mem);
+/** Initialize SPSC queue */
+int spsc_ub_queue_init(struct spsc_ub_queue *q, size_t size, const struct memtype *mem);
 
-void spsc_ub_queue_destroy(struct spsc_ub_queue *q);
+/** Destroy SPSC queue and release memory */
+int spsc_ub_queue_destroy(struct spsc_ub_queue *q);
 
+/** Allocate memory for new node. Each node stores a pointer 
+ * value pushed to unbounded SPSC queue 
+ */
 struct node * spsc_ub_alloc_node(struct spsc_ub_queue *q);
 
-void spsc_ub_enqueue(struct spsc_ub_queue *q, void *v);
+/** Push a value from unbounded SPSC queue 
+ *  return : 1 always as its an unbounded queue
+ */
+int spsc_ub_queue_push(struct spsc_ub_queue *q, void *v);
 
-int spsc_ub_dequeue(struct spsc_ub_queue *q, void **v);
+/** Pull a value from unbounded SPSC queue 
+ *  return : 1 if success else 0
+ */
+int spsc_ub_queue_pull(struct spsc_ub_queue *q, void **v);
 
 #endif /* _SPSC_UB_QUEUE_H_ */

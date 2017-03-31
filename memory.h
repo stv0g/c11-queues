@@ -5,6 +5,11 @@
 #ifndef _MEMORY_H_
 #define _MEMORY_H_
 
+#ifdef __linux__
+	#include <stdint.h>
+	#include <stddef.h>
+#endif
+
 typedef void *(*memzone_allocator_t)(size_t);
 typedef int (*memzone_deallocator_t)(void *, size_t);
 

@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <time.h>
 
 /* There are not many compilers yet which support threads.h natively.
  * We will fallback to a drop-in replacement which is based on pthreads.h */
@@ -19,13 +18,13 @@
   #include <sys/types.h>
 #endif
 
-#include "mpmc_queue.h"
+#include "spsc_ub_queue.h"
 #include "memory.h"
 
-size_t const thread_count = 4;
+size_t const thread_count = 1;
 size_t const batch_size = 10;
-size_t const iter_count = 2000000;
-size_t const queue_size = 1 << 20;
+size_t const iter_count = 20000000;
+//size_t const queue_size = 1 << 10;
 
 int volatile g_start = 0;
 
@@ -55,7 +54,6 @@ __attribute__((always_inline)) static inline uint64_t rdtscp()
 		:
 		: "%rcx", "%rdx", "memory");
 
-	printf("tsc %lu\n", tsc);
 	return tsc;
 }
 
@@ -65,9 +63,9 @@ __attribute__((always_inline)) static inline void nop()
 	__asm__("rep nop;");
 }
 
-int thread_func(void *ctx)
+int thread_func_push(void *ctx)
 {
-	struct mpmc_queue *q = (struct mpmc_queue *) ctx;
+	struct spsc_ub_queue *q = (struct spsc_ub_queue *) ctx;
 
 	srand((unsigned) time(0) + thread_get_id());
 	size_t pause = rand() % 1000;
@@ -83,56 +81,72 @@ int thread_func(void *ctx)
 	for (int iter = 0; iter != iter_count; ++iter) {
 		for (size_t i = 0; i != batch_size; i += 1) {
 			void *ptr = (void *) i;
-			while (!mpmc_queue_push(q, ptr))
-				thrd_yield(); // queue full, let other threads proceed
-		}
-
-		for (size_t i = 0; i != batch_size; i += 1) {
-			void *ptr;
-			while (!mpmc_queue_pull(q, &ptr))
-				thrd_yield(); // queue empty, let other threads proceed
+			spsc_ub_queue_push(q, ptr);	//FIXME
 		}
 	}
+	thrd_yield();
 
+	return 0;
+}
+
+int thread_func_pull(void *ctx)
+{
+	struct spsc_ub_queue *q = (struct spsc_ub_queue *) ctx;
+
+	srand((unsigned) time(0) + thread_get_id());
+	size_t pause = rand() % 1000;
+
+	/* Wait for global start signal */
+	while (g_start == 0)
+		thrd_yield();
+
+	/* Wait for a random time */
+	for (size_t i = 0; i != pause; i += 1)
+		nop();
+
+	for (int iter = 0; iter != iter_count; ++iter) {
+		for (size_t i = 0; i != batch_size; i += 1) {
+			void *ptr;
+			while (!spsc_ub_queue_pull(q, &ptr)){
+				continue;
+			}	//FIXME
+		}
+	}
+	thrd_yield(); // queue empty
+	
 	return 0;
 }
 
 int main()
 {
-	struct mpmc_queue queue;
-	thrd_t threads[thread_count];
+	struct spsc_ub_queue queue;
+	thrd_t threads[thread_count + 1];
 	int ret;
 	
-	mpmc_queue_init(&queue, queue_size, &memtype_heap);
+	spsc_ub_queue_init(&queue, batch_size * iter_count, &memtype_heap);
 
-	for (int i = 0; i != thread_count; ++i)
-		thrd_create(&threads[i], thread_func, &queue);
+	printf("spsc_ub_queue_init successful\n");
+	//for (int i = 0; i != thread_count; ++i)
+	thrd_create(&threads[0], thread_func_push, &queue);
+	thrd_create(&threads[1], thread_func_pull, &queue);
 
 	sleep(1);
-	
-	long long starttime, endtime;
-	struct timespec start, end;
 
-	if(clock_gettime(CLOCK_REALTIME, &start))
-		return -1;
-
+	uint64_t start = rdtscp();
 	g_start = 1;
 
-	for (int i = 0; i != thread_count; ++i)
-		thrd_join(threads[i], NULL);
+	//for (int i = 0; i != thread_count; ++i)
+	thrd_join(threads[0], NULL);
+	thrd_join(threads[1], NULL);
 
-	if(clock_gettime(CLOCK_REALTIME, &end))
-		return -1;
+	uint64_t end = rdtscp();
 	
-	starttime = start.tv_sec*1000000000LL + start.tv_nsec;
-	endtime = end.tv_sec*1000000000LL + end.tv_nsec;
-	printf("cycles/op = %lld\n", (endtime - starttime) / (batch_size * iter_count * 2 * thread_count));
+	printf("cycles/op = %lu\n", (end - start) / (batch_size * iter_count * 2 * thread_count));
+
+	if (queue._tail->_next != NULL)
+		printf("slots in use? There is something wrong with the test\n");
 	
-	size_t used = mpmc_queue_available(&queue);
-	if (used > 0)
-		printf("%zu slots in use? There is something wrong with the test\n", used);
-	
-	ret = mpmc_queue_destroy(&queue);
+	ret = spsc_ub_queue_destroy(&queue);
 	if (ret)
 		printf("Failed to destroy queue: %d", ret);
 	

@@ -29,8 +29,30 @@ This Git repository contains lightweight simple implementation of lockless SPSC 
 
 ## Credits
 
-- Umar Farooq
+- Umar Farooq	<umar1.farooq1@gmail.com>
 - Steffen Vogel <post@steffenvogel.de>
+
+## Initial Testing Results
+All tests are using mem_heap. All tests use *_fib test.
+
+With clock_gettime function for cycle/op measurement:
+Octopus Machine:
+	MPMC: 52-54 cycles/op 	--Something wrong, results too good to be true??
+	Bounded SPSC: 230-300 cycles/op
+	Unbounded SPSC: 300-400 cycles/op
+	Side note: MPMC default test gets stuck with N=20000000, runs ok with N=2000000 with 160 cycles/op
+Ubuntu VM:
+	MPMC: 90 cycles/op	--Again result too good to be true in my opinion
+	Bounded SPSC: 60-65 cycles/op
+	Unbounded SPSC: 170-175 cycles/op
+
+With rdtscp function for cycle/op measurement:
+Octopus Machine: Doesn't support rdtscp function, illegal instruction error. So alternate clock_gettime was used as above.
+
+Ubuntu VM:
+	MPMC: 160-200 cycles/op
+	Bounded SPSC: 160-165 cycles/op
+	Unbounded SPSC: 400-420 cycles/op
 
 ## License
 

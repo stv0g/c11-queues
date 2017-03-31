@@ -1,7 +1,7 @@
 /** Lock-free Single-Producer Single-consumer (SPSC) queue.
  *
  * @author Umar Farooq
- * @copyright 2016 Umar Farooq
+ * @copyright 2016 Umar Farooq <umar1.farooq1@gmail.com>
  * @license BSD 2-Clause License
  * 
  * All rights reserved.
@@ -30,63 +30,63 @@
 
 #include "spsc_queue.h"
 
-void * spsc_queue_init(size_t size, const struct memtype *mem)
+struct spsc_queue * spsc_queue_init(struct spsc_queue * q, size_t size, const struct memtype *mem)
 {
-	struct spsc_queue *q;
-	
-	if (size < sizeof(struct spsc_queue) + 2 * sizeof(q->pointers[0]))
-		return NULL;
-	
 	/* Queue size must be 2 exponent */
 	if ((size < 2) || ((size & (size - 1)) != 0))
 		return NULL;
 	
-	q = memory_alloc(mem, sizeof(struct spsc_queue) + sizeof(q->pointers[0]) * size);
+	q = memory_alloc(mem, sizeof(struct spsc_queue) + (sizeof(q->pointers[0]) * size));
+	if (!q)
+		return NULL;
+	
+	q->mem = mem;
 	
 	q->capacity = size - 1;
-	
-	atomic_init(&q->tail, 0);
-	atomic_init(&q->head, 0);
+
+	atomic_init(&q->_tail, 0);
+	atomic_init(&q->_head, 0);
 
 	return q;
 }
 
-void spsc_queue_destroy(struct spsc_queue *q)
+int spsc_queue_destroy(struct spsc_queue *q)
 {
-	/* Nothing to do here */
-	return;
+	const struct memtype mem = *(q->mem);	/** @todo Memory is not being freed properly??? */
+	return memory_free(&mem, q, sizeof(struct spsc_queue) + ((q->capacity + 1) * sizeof(q->pointers[0])));
 }
 
-int spsc_queue_get_many(struct spsc_queue *q, void *ptrs[], size_t cnt)
+int spsc_queue_get_many(struct spsc_queue *q, void **ptrs[], size_t cnt)
 {
 	if (q->capacity <= spsc_queue_available(q))
 		cnt = 0;
 	else if (cnt > q->capacity - spsc_queue_available(q))
 		cnt = q->capacity - spsc_queue_available(q);
 	
+	/**@todo Is atomic_load_explicit needed here for loading q->_head? */
 	for (int i = 0; i < cnt; i++)
-		ptrs[i] = q->pointers[q->head % (q->capacity + 1)];
+		ptrs[i] = &(q->pointers[q->_head % (q->capacity + 1)]);
 	
 	return cnt;
 }
 
-int spsc_queue_push_many(struct spsc_queue *q, void **ptrs, size_t cnt)
+int spsc_queue_push_many(struct spsc_queue *q, void *ptrs[], size_t cnt)
 {
-	//int free_slots = q->tail < q->head ? q->head - q->tail - 1 : q->head + (q->capacity - q->tail);
+	//int free_slots = q->_tail < q->_head ? q->_head - q->_tail - 1 : q->_head + (q->capacity - q->_tail);
 	size_t free_slots = spsc_queue_available(q);
 	
 	if (cnt > free_slots)
 		cnt = free_slots;
 	
 	for (size_t i = 0; i < cnt; i++) {
-		q->pointers[q->tail] = ptrs[i]; 			//--? alternate use (q->tail + i)%(q->capacity + 1) as index and update q->tail at the end of loop
-		q->tail = (q->tail + 1)%(q->capacity + 1);
+		q->pointers[q->_tail] = ptrs[i];
+		atomic_store_explicit(&q->_tail, (q->_tail + 1)%(q->capacity + 1), memory_order_release);
 	}
 	
 	return cnt;
 }
 
-int spsc_queue_pull_many(struct spsc_queue *q, void **ptrs, size_t cnt)
+int spsc_queue_pull_many(struct spsc_queue *q, void **ptrs[], size_t cnt)
 {
 	if (q->capacity <= spsc_queue_available(q))
 		cnt = 0;
@@ -94,17 +94,17 @@ int spsc_queue_pull_many(struct spsc_queue *q, void **ptrs, size_t cnt)
 		cnt = q->capacity - spsc_queue_available(q);
 	
 	for (size_t i = 0; i < cnt; i++) {
-		ptrs[i] = q->pointers[q->head];
-		q->head = (q->head + 1)%(q->capacity + 1);
+		*ptrs[i] = q->pointers[q->_head];
+		atomic_store_explicit(&q->_head, (q->_head + 1)%(q->capacity + 1), memory_order_release);
 	}
 	
 	return cnt;
 }
 
-int spsc_queue_available(struct spsc_queue *q)	//--? make this func inline
+int spsc_queue_available(struct spsc_queue *q)
 {
-	if (q->tail < q->head)
-		return q->head - q->tail - 1;
+	if (atomic_load_explicit(&q->_tail, memory_order_acquire) < atomic_load_explicit(&q->_head, memory_order_acquire))
+		return q->_head - q->_tail - 1;
 	else
-		return q->head + (q->capacity - q->tail);
+		return q->_head + (q->capacity - q->_tail);
 }
